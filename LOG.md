@@ -1,3 +1,5 @@
+# A Chritmas Story
+
 10:46 AM So recap of my new knowledge gained over the weekend:
 - iOS fairly trivial. Just build for macOS, and patch up the objects’ load commands from macOS -> iOS, to get around the linker being overly zealous.
 - Android. Much more of a quagmire.
@@ -10,7 +12,7 @@
   - Building `bionic` libc from source again requires their odd build tool. But maybe one can use the blueprint file to construct a Makefile (by hand).
   - Building static `libc`, `libm`, ... from bionic /should/ allow us to build android executables that just run on linux, as long as we don’t use any android APIs.
   - Building `linker64` should allow us to run android executables on linux as long as they don’t use any andoird apis.
-  - Maybe we could use cross compiled rts, … libraries, from an android cross compiler and swap them in for the musl/glibc libraries. Kinda frankensteining the thing together. This would allow us to have a native stage2 compiler (no TH or any other restriciton really), and just fix up the libraries during linking on android.
+  - Maybe we could use cross compiled rts, ... libraries, from an android cross compiler and swap them in for the musl/glibc libraries. Kinda frankensteining the thing together. This would allow us to have a native stage2 compiler (no TH or any other restriciton really), and just fix up the libraries during linking on android.
 
 10:46 To be fair, the most “interesting” options are the `linker64` and `bionic` libc builds.
 10:47 The frankensteining thing might work if the cross compiler is technically a stage3 compiler so the ghc abis are stable. But it feels just “wrong”.
@@ -99,7 +101,7 @@ and compile this, what actually happens?
 9:21 AM The compiler will first parse the code, turn it into some abstract syntax tree, likely do some transformations on it, and turn it into a lower level representation (also often referred to as “lowering”) a few times until we end up with effectively an assembly printer (or in some cases a direct instruction printer). For assembly we can feed that into an assembler (the `as` program), to get a byte stream of instructions. These instructions are specific to the CPU we are targeting, so most likely x86_64 or aarch64. The computer will load those instruction in chunks into the cache, and then churn through the instructions.  Again the CPU internally will likely decode the bytes that represent the instructions into some internal representation, but this part we will never see as it’s CPU specific.
 So turn Text into Instructiosn and encode them into sequences of Bytes which the computer loads into the cache and the CPU then runs.
 
-But wait, the CPU is already running our host operating system (Windows, Linux, macOS, …), how can we have it execute our instructions?
+But wait, the CPU is already running our host operating system (Windows, Linux, macOS, ...), how can we have it execute our instructions?
 
 9:24 If we are writing our own bare metal software/operating system this isn’t much of a problem, there will be some predefined offsets where the comptuer expects to read its first instructions off of, so we’d just need to work with the bootloader to make sure it puts our instructions into the right place. We can just throw the raw instructions there, and call it a day. But for a program running on a host operating system, we need to work with that operating system.
 
@@ -133,13 +135,13 @@ But wait, the CPU is already running our host operating system (Windows, Linux, 
 
 10:05 As we saw earlier, we can compile lib.c into lib.o and then use that for linking, but in reality we’ll have lots of .c files we turn into .o files, and wouldn’t it be nice if we could just have an archive of all those .o files? Yes it would very much. That’s what .a files are, they are archives of .o files.  Not it would be too easy if we all agreed on one archive format, because, well, where is the fun in that? So we have GNU archives, and BSD archives. (This is where my windows knowledge leaves me and I have to look this up on a by-need basis.) macOS having a more BSD like userspace uses BSD archives as well. Luckily GNU and BSD archives don’t differ much, but enough to not be 1:1 compatible.
 
-10:08 .a files have a a very simple format, the start with the following 8 bytes !<arch>\n, followed by archive entries for each file contained within the archive. Those entries contain an identifier (usually just the file name, e.g. lib.o), user id, group id, timestamp, size. So you can basically iterate over an archive, by checking for the magic 8 bytes at the beginning to see if it’s actually an archive, and then parsing the entry header (obtaining the metadata of the following payload), skip the payload read the next element, …
+10:08 .a files have a a very simple format, the start with the following 8 bytes !<arch>\n, followed by archive entries for each file contained within the archive. Those entries contain an identifier (usually just the file name, e.g. lib.o), user id, group id, timestamp, size. So you can basically iterate over an archive, by checking for the magic 8 bytes at the beginning to see if it’s actually an archive, and then parsing the entry header (obtaining the metadata of the following payload), skip the payload read the next element, ...
 
 10:10 On quirk is that archives can have multiple entries with the same name, so be careful if you think about extracting an archive. If there are multiple entries in the archive with the same identification (file name), it depends on your ar tool (and it’s version), what the behaviour will be, if you will get the first or last object only or what exactly happens :sigh:
 
 10:11 Fundamentally you can encode any kind of data in archives. It’s not restricted to object files, it’s really just a list of files concatenated with some metadata and the magic 8 `!<arch>\n` bytes at the beginning.
 
-10:13 So let’s say we have a bunch of library functions neatly grouped into string, memory, … files and produce lib.a from string.o, memory.o, … how how do we link our main executable with that? Rather simple. We just pass that lib.a to the linker, and it will mostly transparently deal with this for us.
+10:13 So let’s say we have a bunch of library functions neatly grouped into string, memory, ... files and produce lib.a from string.o, memory.o, ... how how do we link our main executable with that? Rather simple. We just pass that lib.a to the linker, and it will mostly transparently deal with this for us.
 
 10:17 So what are those -l and -L flags then? Let’s go back to my previous example of our library with string and memory and other functions. This seems like a rather useful library to have when working with c code. E.g. pritnf and malloc would be nice to have functions. What should we name our library? It’s really a fundamental c-library, and by convention we’ll call our static archive of object files libc.a, and the shared one libc.so, or libc.dylib.  (Though macOS calls their C library System, so we have libSystem.dylib). Similarly we might package mathematical functions into a library and usually call that libm.
 
@@ -161,11 +163,11 @@ if we build a fully static executable, we only need a kernel that supports the s
 
 12:47 PM One more note on system triples, as I might just end up referring to it without introducing them. To differentiate which system we are talking about it has become customary to use so called system triples. These have the following structure:
 ```<architecture>-<vendor>-<operating system>```
-architecture is something like aarch64 (and it's alias arm64), x86_64 (and it's alias amd64), i386, …
-vendor can be pc, none, unknown, apple, … can, and often is, omitted.
-operatingsystem is effectively the kernel and what describes the operating system sufficiently enough. These can be macos, ios, android, windows, darwin, freebsd, linux, … darwin is the umbrella across macos, ios, tvos, … basically anything that's supposed to work on apples kernel with libSystem. It might be darwin12, … to specify a specific operating system version.
+architecture is something like aarch64 (and it's alias arm64), x86_64 (and it's alias amd64), i386, ...
+vendor can be pc, none, unknown, apple, ... can, and often is, omitted.
+operatingsystem is effectively the kernel and what describes the operating system sufficiently enough. These can be macos, ios, android, windows, darwin, freebsd, linux, ... darwin is the umbrella across macos, ios, tvos, ... basically anything that's supposed to work on apples kernel with libSystem. It might be darwin12, ... to specify a specific operating system version.
 
-12:49 Similarly freebsd12,… for linux we have linux-gnu, linux-musl, … to indicate the libc.
+12:49 Similarly freebsd12,... for linux we have linux-gnu, linux-musl, ... to indicate the libc.
 
 12:52 If we write aarch64-darwin we thusly mean an apple operating system on a 64bit arm cpu.
 aarch64-android and aarch64-linux-bionic would be synonymous.
@@ -258,7 +260,7 @@ libgmp.a:                                                    current ar archive 
 libgmpxx.a:                                                  current ar archive
 ```
 
-8:38 Let’s create a temorary directory, and inspect the libHSmobile-core…a,
+8:38 Let’s create a temorary directory, and inspect the libHSmobile-core...a,
 ```
 $ ar x ../libHSmobile-core-0.1.0.0-HfUuggbqw4DC9ci8Blc8Tf-ghc8.10.7.a
 $ ls
@@ -286,34 +288,30 @@ LibdwPool.o:          Mach-O 64-bit object arm64
 ```
 ok. So that looks rather promising. We got aarch64 mach-o files. We should be able to link them into an iOS application. Let’s try this next.
 
-8:46 PM We’ll start Xcode on a mac, and select “Create a new Xcode project”…
-Screenshot 2021-12-23 at 8.42.09 PM.png 
-Screenshot 2021-12-23 at 8.42.09 PM.png
+8:46 PM We’ll start Xcode on a mac, and select “Create a new Xcode project”...
+![Screenshot 2021-12-23 at 8.42.09 PM](assets/Screenshot 2021-12-23 at 8.42.09 PM.png) 
 
 
 8:47 Next we’ll chose iOS > App as the template.
-Screenshot 2021-12-23 at 8.42.24 PM.png 
-Screenshot 2021-12-23 at 8.42.24 PM.png
+![Screenshot 2021-12-23 at 8.42.24 PM](assets/Screenshot 2021-12-23 at 8.42.24 PM.png) 
 
 
 8:48 And then fill out the metadata. I’ve restricted it to the bare minimum, that includes leaving out tests. But we are going to use SwiftUI and Swift, because this is how modern apps are supposed to be developed for iOS (according to Apple).
-Screenshot 2021-12-23 at 8.42.56 PM.png 
-Screenshot 2021-12-23 at 8.42.56 PM.png
+![Screenshot 2021-12-23 at 8.42.56 PM](assets/Screenshot 2021-12-23 at 8.42.56 PM.png) 
 
 
 8:48 And we’ve gout ourself a scaffolded iOS application.
-Screenshot 2021-12-23 at 8.43.47 PM.png 
-Screenshot 2021-12-23 at 8.43.47 PM.png
+![Screenshot 2021-12-23 at 8.43.47 PM](assets/Screenshot 2021-12-23 at 8.43.47 PM.png) 
 
 
 8:49 If you want to follow along, the code is at github.com:zw3rk/mobile-core-ios
 
-8:52 Because we want to link against some C sources, we need some bridging header to get our C functions available in swift. The easiest way I’ve found to get this right is to go via Menubar > File > New > File…
+8:52 Because we want to link against some C sources, we need some bridging header to get our C functions available in swift. The easiest way I’ve found to get this right is to go via Menubar > File > New > File...
 And chose some Objective C file, call it Dummy (or anything really), and then delete it.
 3 files 
-Screenshot 2021-12-23 at 8.50.46 PM.png
-Screenshot 2021-12-23 at 8.51.18 PM.png
-Screenshot 2021-12-23 at 8.51.27 PM.png
+![Screenshot 2021-12-23 at 8.50.46 PM](assets/Screenshot 2021-12-23 at 8.50.46 PM.png)
+![Screenshot 2021-12-23 at 8.51.18 PM](assets/Screenshot 2021-12-23 at 8.51.18 PM.png)
+![Screenshot 2021-12-23 at 8.51.27 PM](assets/Screenshot 2021-12-23 at 8.51.27 PM.png)
 
 8:54 We now have a new file in the project called mobile-core-ios-Bridging-Header.h, and we can add our extern c functions to it:
 ```c
@@ -367,20 +365,18 @@ struct ContentView: View {
 ```
 9:01 At this point we now have an application that wants to call out to two haskell functions, but, doesn’t know about them (yet).
 
-9:03 We’ll create a new Group Libraries and add the libgmp.a, libffi.a and libHSmobile-core…a in there.
+9:03 We’ll create a new Group Libraries and add the libgmp.a, libffi.a and libHSmobile-core...a in there.
 
 9:05 Dropping libraries into xcode, makes it usually decide to automatically link those libraries against the target.
-Screenshot 2021-12-23 at 9.04.50 PM.png 
-Screenshot 2021-12-23 at 9.04.50 PM.png
+![Screenshot 2021-12-23 at 9.04.50 PM](assets/Screenshot 2021-12-23 at 9.04.50 PM.png) 
 
 9:06 but, those libraries are built for aarch64-darwin, and I’m on x86_64-darwin, so there is no way for me to actually test this in the simulator. We could build fat libraries that contain multiple slices for aarch64 and x86_64, but for now, we’ll just restrict ourselves to actually testing this on a real device.
 
 9:10 Thanks to my test device not having been update in a while, I’m greeted with the following information. My device’s iOS is too old. I’ll turn down the deployment target to iOS 14+.
-Screenshot 2021-12-23 at 9.07.24 PM.png 
-Screenshot 2021-12-23 at 9.07.24 PM.png
+![Screenshot 2021-12-23 at 9.07.24 PM](assets/Screenshot 2021-12-23 at 9.07.24 PM.png) 
 
 
-9:10 Let’s try again…
+9:10 Let’s try again...
 
 9:10 Wonderful, we are greeted with the following errors, that didn’t go as planned:
 ```
@@ -511,10 +507,8 @@ Signing for "mobile-core-ios" requires a development team. Select a development 
 ```
 Success? Let’s see.
 
-9:48 After setting the Signing Team, it… builds?
-Screenshot 2021-12-23 at 9.46.18 PM.png 
-Screenshot 2021-12-23 at 9.46.18 PM.png
-
+9:48 After setting the Signing Team, it... builds?
+![Screenshot 2021-12-23 at 9.46.18 PM](assets/Screenshot 2021-12-23 at 9.46.18 PM.png) 
 
 9:49 Sadly not yet, it fails with
 ```
@@ -545,11 +539,11 @@ So, we are missing libiconv, that’s not so bad, apple provides that.
 9:54 After disabling Bitcode, and adding libiconv, the build suceeds! :tada:
 
 2 files
-Screenshot 2021-12-23 at 9.51.04 PM.png
-Screenshot 2021-12-23 at 9.53.03 PM.png
+![Screenshot 2021-12-23 at 9.51.04 PM](assets/Screenshot 2021-12-23 at 9.51.04 PM.png)
+![Screenshot 2021-12-23 at 9.53.03 PM](assets/Screenshot 2021-12-23 at 9.53.03 PM.png)
 
 9:56 It actually runs on the device. (An iPhone 7+ here).
-Image from iOS
+![Image from iOS 1.png](assets/Image from iOS 1.jpg)
 
 
 9:58 This seems like a good point to leave it here for today. Guess we “solved” the basic task of getting a haskell library running on an iPhone.
@@ -567,31 +561,29 @@ Image from iOS
 
 2:54 PM After launching Android Studio, we’ll create a new project, with an empty activity. Select kotlin as language (default) and API 21 as the minimum SDK. Neither the language nor the minimum SDK should pose any issues (I hope).
 4 files 
-Screenshot 2021-12-25 at 2.49.49 PM.png
-Screenshot 2021-12-25 at 2.50.48 PM.png
-Screenshot 2021-12-25 at 2.51.00 PM.png
-Screenshot 2021-12-25 at 2.52.09 PM.png
+![Screenshot 2021-12-25 at 2.49.49 PM](assets/Screenshot 2021-12-25 at 2.49.49 PM.png)
+![Screenshot 2021-12-25 at 2.50.48 PM](assets/Screenshot 2021-12-25 at 2.50.48 PM.png)
+![Screenshot 2021-12-25 at 2.51.00 PM](assets/Screenshot 2021-12-25 at 2.51.00 PM.png)
+![Screenshot 2021-12-25 at 2.52.09 PM](assets/Screenshot 2021-12-25 at 2.52.09 PM.png)
 
 
 2:56 We can use our hydra build of the mobile-core library for aarch64-android to obtain the libraries we need.  This build was only successful because we didn’t use any TH, and as such could simply cross compile our trivial library.
 
 2:57 Android Studio should now look something like this.
-Screenshot 2021-12-25 at 2.56.58 PM.png 
-Screenshot 2021-12-25 at 2.56.58 PM.png
+![Screenshot 2021-12-25 at 2.56.58 PM](assets/Screenshot 2021-12-25 at 2.56.58 PM.png) 
 
 
 3:00 Now, to add our haskell library to an android application the easies seem to be to right-click on the “app” in the project tree on the left, and select “Add C++ to module”.
 
 3:01 That will add some CMake and C++ file to our project, both files contain some guidance, notes on how to use it. But we do need to wire our haskell lib up via JNI.
 3 files 
-Screenshot 2021-12-25 at 2.58.33 PM.png
-Screenshot 2021-12-25 at 2.58.40 PM.png
-Screenshot 2021-12-25 at 2.59.30 PM.png
+![Screenshot 2021-12-25 at 2.58.33 PM](assets/Screenshot 2021-12-25 at 2.58.33 PM.png)
+![Screenshot 2021-12-25 at 2.58.40 PM](assets/Screenshot 2021-12-25 at 2.58.40 PM.png)
+![Screenshot 2021-12-25 at 2.59.30 PM](assets/Screenshot 2021-12-25 at 2.59.30 PM.png)
 
-3:08 PM We’ll drop the library files from the pkg.zip from hydra, into libs/arm64-a8v into the cpp folder next to the pre-generated CMakeLists.txt.
+3:08 PM We’ll drop the library files from the `pkg.zip` from hydra, into `libs/arm64-a8v` into the `cpp` folder next to the pre-generated `CMakeLists.txt`.
 3:09 Again, you can follow along with the source at github.com:zw3rk/mobile-core-android
-Screenshot 2021-12-25 at 3.08.45 PM.png 
-Screenshot 2021-12-25 at 3.08.45 PM.png
+![Screenshot 2021-12-25 at 3.08.45 PM](assets/Screenshot 2021-12-25 at 3.08.45 PM.png) 
 
 
 3:11 If we launch the application (on a device) right, now, nothing much will happen. We’ll just be greeted with a “Hello World!” text. After all, we didn’t link the libraries, nor do provide any integration just yet.
@@ -645,9 +637,7 @@ class MainActivity
 ```
 
 3:22 Now we can use the helpful tooling in Android Studio and click on the red exclamation mark next to the external fun statement.
-Screenshot 2021-12-25 at 3.20.35 PM.png 
-Screenshot 2021-12-25 at 3.20.35 PM.png
-
+![Screenshot 2021-12-25 at 3.20.35 PM](assets/Screenshot 2021-12-25 at 3.20.35 PM.png)
 
 3:24 That generates the following code in mobile_core_android.cpp
 ```cpp
@@ -689,7 +679,7 @@ mobile_core_android.cpp:26: undefined reference to `hs_init(int, char**)'
 ```
 this is due to our extern declaration not explicitly stating `extern "C"` :facepalm: , so let’s fix that for hs_init.
 
-3:57 Huh, this is … somewhat unexpected
+3:57 Huh, this is ... somewhat unexpected
 ```
 mobile-core-android/app/src/main/cpp/libs/arm64-v8a/libHSmobile-core-0.1.0.0-HfUuggbqw4DC9ci8Blc8Tf-ghc8.10.7.a(GetTime.o): In function `getCurrentThreadCPUTime':
 /build/aarch64-unknown-linux-android-ghc-8.10.7-configured-src/rts/posix/GetTime.c:96: undefined reference to `clock_getcpuclockid'
@@ -748,7 +738,7 @@ clang++: error: linker command failed with exit code 1 (use -v to see invocation
 ninja: build stopped: subcommand failed.
 ```
 
-3:58 We are apparently missing libiconv (again…; we were missing that on iOS as well). But a bunch of stdout and other symbols are missing?
+3:58 We are apparently missing libiconv (again...; we were missing that on iOS as well). But a bunch of stdout and other symbols are missing?
 
 4:02 I guess we might have to explicilty link libc  (in androids case this is bionic).
 
@@ -781,11 +771,11 @@ which are all symbols from libiconv I believe.
 
 4:15 After adding libiconv to the android project the build now succeeds, but the app won’t lauch, and crashes right away. Cool.
 
-4:15 Android Studio has a debugger, so let’s try that, and see what comes up…
+4:15 Android Studio has a debugger, so let’s try that, and see what comes up...
 
 4:23 PM well, it just keeps crashing wihtout providing any form of output. This is exiting.
 
-4:33 PM So debugger won’t come up, app won’t start, I guess we are looking for breadcrumbs in that brutal logcat event log… and we find?
+4:33 PM So debugger won’t come up, app won’t start, I guess we are looking for breadcrumbs in that brutal logcat event log... and we find?
 ```
     --------- beginning of crash
 2021-12-25 16:30:58.217 25280-25280/com.zw3rk.mobile_core_android E/AndroidRuntime: FATAL EXCEPTION: main
@@ -886,9 +876,9 @@ which I find confusing, as that implies that malloc_init_hard is a local text sy
 find_library( c-lib
               c )
 ```
-returns the full path to the static archive (…/libc.a). I’ve yet to find out how to force it to pick up the dynamic library.
+returns the full path to the static archive (.../libc.a). I’ve yet to find out how to force it to pick up the dynamic library.
 
-10:20 AM The best way to debug anything in cmake through android studio seems to be some rather brutal printf style debugging. We can use message(FATAL_ERROR "…"), to have cmake exit, and give us the output. This way we can see that find_library, finds
+10:20 AM The best way to debug anything in cmake through android studio seems to be some rather brutal printf style debugging. We can use message(FATAL_ERROR "..."), to have cmake exit, and give us the output. This way we can see that find_library, finds
 ```
 ~/Library/Android/sdk/ndk/21.4.7075529/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/aarch64-linux-android/libc.a
 ```
@@ -942,18 +932,18 @@ closures.c:(.text+0x28d0): undefined reference to `memfd_create'
 /zw3rk/mobile-core-android/app/src/main/cpp/libs/arm64-v8a/libiconv.a(localcharset.o): In function `locale_charset':
 (.text+0xc): undefined reference to `nl_langinfo'
 ```
-nl_langinfo, and _write_chk would be available from sdk 26 onwards. But my test android device only has r23. So at least I will need to work around this somehow. memfd_create isn’t available (exposed) in sdk 26 either. Hmm…
+nl_langinfo, and _write_chk would be available from sdk 26 onwards. But my test android device only has r23. So at least I will need to work around this somehow. memfd_create isn’t available (exposed) in sdk 26 either. Hmm...
 
 2:08 PM So if we don’t have that functionality in the SDK, why did we end up building it that way?
 
 2:08 libiconv and libffi are C libraries. Short detour about autotools.
 
-2:13 While most of us work on a daily basis with languages that come with their own respective build system (rust has cargo, haskell has cabal, javascript has npm, scala has sbt, …) around the time when this all started an we had mostly C, assembly, pascal, and a few other languages, programs were smaller, and operating systems more diverse. So were C compilers, at different versions, operating systems, … and the major question became: how do I build my software across multiple architectures on different operating systems against different toolchains? The solution still sticks with us to this day, in the form of autotools.
+2:13 While most of us work on a daily basis with languages that come with their own respective build system (rust has cargo, haskell has cabal, javascript has npm, scala has sbt, ...) around the time when this all started an we had mostly C, assembly, pascal, and a few other languages, programs were smaller, and operating systems more diverse. So were C compilers, at different versions, operating systems, ... and the major question became: how do I build my software across multiple architectures on different operating systems against different toolchains? The solution still sticks with us to this day, in the form of autotools.
 The idea is fairly simple: what if we rely on the bare minimum we can everyone expect to agree on? Some very basic shell? And then we provide routines to (a) guess some values, but more importantly (b) interrogate tools to derive information?
 
-2:15 While we can use Makefiles to fairly easily define a set of build rules, and make being available with almost every toolchain, we do not yet have a way for feature detection. Does this system support function xyz? How does it expect to link library lib? How large are machine words? 4byes? 8bytes? Or even something different? What are the sizes of c types? ints, longs, …
+2:15 While we can use Makefiles to fairly easily define a set of build rules, and make being available with almost every toolchain, we do not yet have a way for feature detection. Does this system support function xyz? How does it expect to link library lib? How large are machine words? 4byes? 8bytes? Or even something different? What are the sizes of c types? ints, longs, ...
 
-2:16 Thus autotools provides a way to describe in a fairly obscure language how we want to detect features in a set of files (configure.ac, aclocal.m4, …) m4 being yet another macro processing language.
+2:16 Thus autotools provides a way to describe in a fairly obscure language how we want to detect features in a set of files (configure.ac, aclocal.m4, ...) m4 being yet another macro processing language.
 
 2:16 So we write a simple configure.ac, and run auto(re)conf on it. It will produce a configure shell script for us, that does all the feature detection we asked for.
 
@@ -977,20 +967,19 @@ libffi.overrideAttrs (old: {
   '';
 });
 ```
-This will take the libffi derivation, and enable producing static (.a) lirbaries, disable the fortify hardening feature, and … quite unorthodox, force HAVE_MEMFD_CREATE  to be undefined. This effectively reverse any #define HAVE_MEMFD_CREATE that the configure script would have written into the header file.
+This will take the libffi derivation, and enable producing static (.a) lirbaries, disable the fortify hardening feature, and ... quite unorthodox, force HAVE_MEMFD_CREATE  to be undefined. This effectively reverse any #define HAVE_MEMFD_CREATE that the configure script would have written into the header file.
 As this is run in postConfigure, we are effectively patching up the value we didn’t want configure to produce. :facepalm:
 
 2:29 We can do the same for libiconv to disable HAVE_LANGINFO_CODESET.
 
-2:29 With both libraries patched up, we should then not run into any further linking complications…
+2:29 With both libraries patched up, we should then not run into any further linking complications...
 
-2:29 … and we don’t. It builds; and doesn’t crash on load.
+2:29 ... and we don’t. It builds; and doesn’t crash on load.
 
 2:30 So let’s fix up that hello() string.
 
 2:32 Our Main Activity has a TextView with an id called example. This is the text, we want to replace with the string from our haskell library.
-Screenshot 2021-12-26 at 2.30.43 PM.png 
-Screenshot 2021-12-26 at 2.30.43 PM.png
+![Screenshot 2021-12-26 at 2.30.43 PM](assets/Screenshot 2021-12-26 at 2.30.43 PM.png) 
 
 2:33 In our MainActivity.kt file we need to first tell the compiler that there is an external function we want to call, and it returns a String.
 
@@ -1010,9 +999,7 @@ external fun hello() : String
 ```
 
 2:36 Android studio will complain that there is no hello external function, and provide us with a quick fix.
-Screenshot 2021-12-26 at 2.35.55 PM.png 
-Screenshot 2021-12-26 at 2.35.55 PM.png
-
+![Screenshot 2021-12-26 at 2.35.55 PM](assets/Screenshot 2021-12-26 at 2.35.55 PM.png) 
 
 2:37 This will take us to the mobile_core_android.cpp file and it will also have generated the proper function name for us, all we need to do is fill our the logic.
 2:37 We come up with the following solution:
@@ -1046,8 +1033,8 @@ Java_com_zw3rk_mobile_1core_1android_MainActivityKt_hello(JNIEnv *env, jclass cl
 }
 ```
 
-2:42 And it compiles… and runs. Even on actual android hardware.
-Image from iOS
+2:42 And it compiles... and runs. Even on actual android hardware.
+![Image from iOS 2](assets/Image from iOS 2.jpg)
 
 :tada:
 
@@ -1070,7 +1057,7 @@ We sadly had to deal with some complications along the way (that mostly had to d
 - Making macOS aarch64 built object files, compatible with iOS (rewriting the platform embedded in the object files)
 - Dealing with library expectations and the android SDK, and working around limitations.
 
-From a project management perspective, we could now comfortably start with three (or more) teams. If the teams can agree on API functionality for the next release, the library team can focus on implementing the business logic; they can also use all the testing tools at their disposal for the library. And each of the iOS and Android teams can preliminarily mock their APIs, and just replace the mocks with the library once delivered. We could add additional teams if we wanted a web based solution now. We might also want a service (as in JSON api, …) solution. We could also want a CLI solution. Or a desktop solution (natively or via Electron, …). This can all be similarly split across the same boundary.
+From a project management perspective, we could now comfortably start with three (or more) teams. If the teams can agree on API functionality for the next release, the library team can focus on implementing the business logic; they can also use all the testing tools at their disposal for the library. And each of the iOS and Android teams can preliminarily mock their APIs, and just replace the mocks with the library once delivered. We could add additional teams if we wanted a web based solution now. We might also want a service (as in JSON api, ...) solution. We could also want a CLI solution. Or a desktop solution (natively or via Electron, ...). This can all be similarly split across the same boundary.
 
 Challenges ahead:
 - We haven’t used any Template Haskell yet. (And I’m certain it will break for our Android pipeline; as I’ve alluded to in the discussion around Template Haskell)
@@ -1216,7 +1203,7 @@ $ ldd /nix/store/rfj6bzfzq33fg2md8ycvq5120z2d5gn4-remote-iserv-exe-remote-iserv-
 	not a dynamic executable
 ```
 
-8:53 so… it’s not a dynamic executable, but still has the interpreter set? That seems odd…
+8:53 so... it’s not a dynamic executable, but still has the interpreter set? That seems odd...
 
 9:03 PM If we inspect the executable on an aarch64-linux machine we see
 ```shell
@@ -1404,7 +1391,7 @@ Segmentation fault (core dumped)
 $ file dist/build/remote-iserv/remote-iserv
 dist/build/remote-iserv/remote-iserv: ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, with debug_info, not stripped
 ```
-and even works in qemu…
+and even works in qemu...
 ```shell
 /nix/store/hm1fz57xqzhnvrc8hy2il8n81l3nj12l-qemu-6.1.0/bin/qemu-aarch64 dist/build/remote-iserv/remote-iserv
 usage: remote-iserv /path/to/storage PORT [-v]
@@ -1501,7 +1488,7 @@ pkgs/build-support/setup-hooks/patch-shebangs.sh
 # A script file must be marked as executable, otherwise it will not be
 # considered.
 ```
-we can deduce that this is likely not the issue we are looking at. We don’t care about #!/… interpreter lines, we actually care about the patchelf --set-interpreter call that must be happening somewhere.
+we can deduce that this is likely not the issue we are looking at. We don’t care about #!/... interpreter lines, we actually care about the patchelf --set-interpreter call that must be happening somewhere.
 
 10:21 If we search nixpkgs for linker64, we find
 ```
@@ -1534,7 +1521,7 @@ so, we write the linker into a nix-support/dynamic-linker file, and create nix-s
 
 10:53 Ok, short response-file detour.
 
-10:54 If we pass argument to executables, we usually talke about executable --arg1 --arg2 x y z and so on. Now the space we have available for that string or arguments we can pass to an executable (this is what ends up in the argv and argc values) can be system dependent, and is not infinite. So how do we get around this if we need to pass a lot of arguments? The idea is to pass a file instead of the arguments with a special syntax. The syntax for response files is @/path/to/file, and the program will then read that file, and parse the arguments from that file. This of course means the program actually needs to support this response file feature and it’s up to the developer to support it. gcc and clang as well as most of the toolchains do support this, simply because passing library paths, library names, include paths, … can become very long very fast, and thus they are running into maximum argument length limits fast. (edited) 
+10:54 If we pass argument to executables, we usually talke about executable --arg1 --arg2 x y z and so on. Now the space we have available for that string or arguments we can pass to an executable (this is what ends up in the argv and argc values) can be system dependent, and is not infinite. So how do we get around this if we need to pass a lot of arguments? The idea is to pass a file instead of the arguments with a special syntax. The syntax for response files is @/path/to/file, and the program will then read that file, and parse the arguments from that file. This of course means the program actually needs to support this response file feature and it’s up to the developer to support it. gcc and clang as well as most of the toolchains do support this, simply because passing library paths, library names, include paths, ... can become very long very fast, and thus they are running into maximum argument length limits fast. (edited) 
 
 10:58 There is a tiny amusement here: while gcc does support response files, it internally passes arguments as non-response files to subprocesses (e.g. collect2), this has the brilliant effect of gcc support arbitrary long arguments via response files, but really being limited by the maximum argument size internally.  Thus one has to be very careful not to pass too many arguments (or work around their length) to gcc, that it would internally forward to collect2.  :facepalm:
 
@@ -1542,4 +1529,717 @@ so, we write the linker into a nix-support/dynamic-linker file, and create nix-s
 
 11:00 this is annoying as it means we’ll potentially have to rebuild the world, as this change is so fundamental that it might just change every package.
 
-4:48 PM (… still waiting for CI to rebuild everything after making those changes to checkLinkType which are at the base of the toolchains and thus cause every package to need to be rebuilt …)
+4:48 PM (... still waiting for CI to rebuild everything after making those changes to checkLinkType which are at the base of the toolchains and thus cause every package to need to be rebuilt ...)
+
+9:16 PM It **did** finally [build](https://ci.zw3rk.com/build/427638/nixlog/1/tail) and all the basics look good
+```shell
+$ file /nix/store/4i9vj2yvnl095jb9l7mczvdnnz1ksmp2-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv
+/nix/store/4i9vj2yvnl095jb9l7mczvdnnz1ksmp2-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv: ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, with debug_info, not stripped
+
+$ ldd /nix/store/4i9vj2yvnl095jb9l7mczvdnnz1ksmp2-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv
+	not a dynamic executable
+
+$ /nix/store/5ca9ws9hj9isc7x5iq542szbzdyvrnyg-qemu-6.1.0/bin/qemu-aarch64 /nix/store/4i9vj2yvnl095jb9l7mczvdnnz1ksmp2-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv
+usage: remote-iserv /path/to/storage PORT [-v]
+```
+... but it segfaults
+```shell
+---> Starting remote-iserv on port 6721
+---| remote-iserv should have started on 6721
+Listening on port 6721
+qemu: uncaught target signal 11 (Segmentation fault) - core dumped
+iserv-proxy: <socket: 7>: hGetBufSome: resource vanished (Connection reset by peer)
+/nix/store/44zjyq5i0l7ad54j89b720yb21f16n0y-iserv-wrapper/bin/iserv-wrapper: line 10:   186 Segmentation fault      (core dumped) /nix/store/5ca9ws9hj9isc7x5iq542szbzdyvrnyg-qemu-6.1.0/bin/qemu-aarch64 /nix/store/4i9vj2yvnl095jb9l7mczvdnnz1ksmp2-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv tmp $PORT
+
+<no location info>: error: ghc: ghc-iserv terminated (1)
+```
+9:18 Thus, I guess we’ll have to debug `remote-iserv`.
+
+9:32 PM As we know the failing `.drv`, we do the same dance again, and enter a `nix-shell` for it. If we run `genericBuild` we find ourselves being ejected from the nix shell. That’s not so cool, so we try a second time and this time run the steps by hand: `unpackPhase`, `patchPhase`. `configurePhase` doesn’t work for some reason, so we `echo "$configurePhase"` and run the command that starts with `$SETUP_HS`. Same for `$buildPhase`. We notice that it takes quite a bit of time before it crashes. Interesting. So how do we get more verbosity out of this?
+
+9:33 `remote-iserv` has a `-v` flag, and so does `iserv-proxy`. But they are driven by `iserv-wrapper`, and that’s in the nix store, so we can’t modify it? Well, let’s just copy it to `$PWD` and make it writable. We can then pass `-pgmi $PWD/iserv-wrapper`.
+
+9:36 This yields the following:
+```shell
+$ $SETUP_HS build lib:mobile-core -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-fexternal-interpreter --ghc-option=-pgmi --ghc-option=$PWD/iserv-wrapper --ghc-option=-L/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib --ghc-option=-fPIC --gcc-option=-fPIC
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 8827
+---| remote-iserv should have started on 8827
+[        remote-iserv] Opening socket
+Listening on port 8827
+[        remote-iserv] Starting serv
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: MallocStrings ["This will trigger Template Haskell. Hooray!"]
+[        remote-iserv] writing pipe: [RemotePtr 12970367291930780032]
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: InitLinker
+[        remote-iserv] writing pipe: ()
+[        remote-iserv] reading pipe...
+Need Path: tmp/nix/store/irqmifkzz75ai9x9sdg171760ngsd5cz-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: AddLibrarySearchPath "tmp/nix/store/irqmifkzz75ai9x9sdg171760ngsd5cz-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1"
+[        remote-iserv] writing pipe: RemotePtr 0
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LoadArchive "tmp/nix/store/irqmifkzz75ai9x9sdg171760ngsd5cz-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1/libHSghc-prim-0.6.1.a"
+iserv-proxy: <socket: 6>: hGetBufSome: resource vanished (Connection reset by peer)
+/run/user/1000/tmp.AxXerUa7eo/mobile-core-root-lib-mobile-core/iserv-wrapper: line 10: 600416 Segmentation fault      (core dumped) /nix/store/5ca9ws9hj9isc7x5iq542szbzdyvrnyg-qemu-6.1.0/bin/qemu-aarch64 /nix/store/4i9vj2yvnl095jb9l7mczvdnnz1ksmp2-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv tmp $PORT -v
+```
+my assumption now is that we might have some bug in ghc’s in-memory linker.
+
+9:39 Detour: what is ghc’s in-memory linker?
+As I’ve explained a while back, GHC needs to run a function to evaluate a template haskell splice. But if this function is part of a library (libHS...a), how do we run it? The archive only contains objects. And usually we’d throw them at a linker program (e.g. `ld`) to produce an executable or shared library. But we only have object files. Ok, so we could maybe turn this into a shared object library, and then ask the system linker to load it into our process with `dlopen`,... BUT, system linkers are finicky and buggy, and potentially unable to unload code... and not even available on some platforms. So GHC comes with it’s own linker for ELF and Mach-O object files for x86_64, and aarch64, and some (probably incomplete aarch32), and ppc?,...
+
+9:41 This linker can parse object files (or object files contained in archives), and load them into memory. It then has to do a very important step: relocation. Relocation is in essence the wiring of different objects together. If object A references symbol S (could be a function on data) in object B, we need to have that reference in A point to where we loaded B into memory.
+
+9:42 So our object files contain a relocation section, and once we have loaded all dependencies into memory we walk over the relocation table. The relocation table tells us where (at what offset) from the data or text section we mapped into memory of Object A, we need to embed the memory location to the symbol S in object B.
+
+9:43 There are a few different relocation types, depending on the instruction at that offset that we patch up. E.g. it could be a LOAD instruction, or a JUMP instruction, ... and there might be some value encoded in the instruction already. We might want to add that to the symbol value, etc. Lots of possibilities. Of course relocations are object file dependent, ELF has other relocations that Mach-O, and they are also different per architecture.
+
+9:45 Another fun observation is: aarch64 has at most a 4GB range of relative addressable memory (otherwise you’d need to go through an offset table or procedure linking table; but that’s a topic for another day); so if A and B end up too far apart in memory (and we all use address randomization, of course), we may have trouble linking them together.
+
+9:46 anyway, so we have this piece of code in GHC that performs almost the same logic as the `ld` program when linking executable. But it’s lazy, becuase this is haskell :slightly_smiling_face:
+
+9:46 And this is how GHC can with just a bunch of object files (and archives) load pretty much any function it compiled into memory and execute it from there.
+
+9:46 And this piece of code is buggy (or at least that’s my current assumption) for aarch64-android.
+
+10:13 PM guess, I’ll be doing a gdb session tomorrow.
+
+9:13 AM Alright, so let’s do try this. First we’ll have to get back into our shell that broke.
+```shell
+# enter the nix shell for the broken derivation
+$ nix-shell /nix/store/r73j18zy5wdsblgvjsfy306n66bzcwa9-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv
+# change into a temporary directory, so we don't pollute what ever we started.
+$ cd $(mktemp -d)
+# create a temporary $out directory (this is where the build process might want to install build products)
+$ mkdir tmp-out
+$ export out=$PWD/tmp-out
+# unpack the sources
+$ unpackPhase
+# change into the source (now unpacked) source directory
+$ cd mobile-core-root-lib-mobile-core
+# run the patchPhase, just in case we have patches (we don't this time, but in general we might)
+$ patchPhase
+# grab the configure line
+$ echo "$configurePhase"
+$ $SETUP_HS configure --prefix=$out lib:mobile-core $(cat /nix/store/g7l31ha678rdc4mn4fdhfz53ag7smp5z-aarch64-unknown-linux-android-mobile-core-lib-mobile-core-0.1.0.0-config/configure-flags) --with-ghc=aarch64-unknown-linux-android-ghc --with-ghc-pkg=aarch64-unknown-linux-android-ghc-pkg --with-hsc2hs=aarch64-unknown-linux-android-hsc2hs --with-gcc=aarch64-unknown-linux-android-cc --with-ld=aarch64-unknown-linux-android-ld --with-ar=aarch64-unknown-linux-android-ar --with-strip=aarch64-unknown-linux-android-strip --disable-executable-stripping --disable-library-stripping --disable-library-profiling --disable-executable-profiling --enable-static --disable-shared --disable-coverage --enable-library-for-ghci --enable-split-sections --hsc2hs-option=--cross-compile --ghc-option=-fPIC --gcc-option=-fPIC
+# grab the build line
+$ echo "$buildPhase"
+$ $SETUP_HS build lib:mobile-core -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-fexternal-interpreter --ghc-option=-pgmi --ghc-option=/nix/store/44zjyq5i0l7ad54j89b720yb21f16n0y-iserv-wrapper/bin/iserv-wrapper --ghc-option=-L/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib --ghc-option=-fPIC --gcc-option=-fPIC
+```
+alright, so this fails predictably.
+Let’s patch up the iserv-wrapper, to be more verbose and have qemu listen for a gdb session.
+```shell
+$ cp /nix/store/44zjyq5i0l7ad54j89b720yb21f16n0y-iserv-wrapper/bin/iserv-wrapper .
+$ chmod +w iserv-wrapper
+```
+and then change the qmeu line to
+```shell
+/nix/store/5ca9ws9hj9isc7x5iq542szbzdyvrnyg-qemu-6.1.0/bin/qemu-aarch64 -g 1234 /nix/store/4i9vj2yvnl095jb9l7mczvdnnz1ksmp2-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv tmp $PORT -v &
+```
+and then start the build command (again) but this time pointing at our customized iserv-wrapper.
+
+9:16
+```shell
+$ $SETUP_HS build lib:mobile-core -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-fexternal-interpreter --ghc-option=-pgmi --ghc-option=$PWD/iserv-wrapper --ghc-option=-L/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib --ghc-option=-fPIC --gcc-option=-fPIC
+Now, we just need to start a gdb session (in another terminal).
+$ nix-shell -p gdb
+$ gdb /nix/store/4i9vj2yvnl095jb9l7mczvdnnz1ksmp2-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv
+(gdb) target remote localhost:1234
+(gdb) c
+```
+and we’ll see it (slowly) progressing in the oother terminal.
+
+9:18 a little while late, our (full) gdb session looks like this:
+```shell
+GNU gdb (GDB) 10.2
+Copyright (C) 2021 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-unknown-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<https://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+    <http://www.gnu.org/software/gdb/documentation/>.
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from /nix/store/4i9vj2yvnl095jb9l7mczvdnnz1ksmp2-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv...
+(gdb) target remote localhost:1234
+Remote debugging using localhost:1234
+0x0000000000305500 in _start ()
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+ocGetNames_ELF (oc=oc@entry=0xb400005501e54500) at rts/linker/Elf.c:812
+812	rts/linker/Elf.c: No such file or directory.
+(gdb)
+```
+
+9:18 so, we did crash in the linker. Let’s try to locate the correct source line.
+
+9:19 I think this would be the 8.10.7 source, we used to build iserv-remote with the same version (I think), but we can again ask nix for this.
+
+9:22 The `remote-iserv` binary has to be a dependency of `/nix/store/r73j18zy5wdsblgvjsfy306n66bzcwa9-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv`, if we ask nix for the dependencies:
+```shell
+$ nix-store -q --tree /nix/store/r73j18zy5wdsblgvjsfy306n66bzcwa9-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv
+```
+we find
+```
+/nix/store/z7dqc2cph2p816h5g01g2zf46l55lmfr-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7.drv
+```
+from there we can look for the configured-src (haskell.nix splits building ghc, into (a) configuring the source, (b) using that to build ghc) and we find
+```
+/nix/store/477ygzwv7vbsmr3dlpr1qzcb6ab6a4wa-aarch64-unknown-linux-android-ghc-8.10.7-configured-src.drv
+```
+9:24 we can now use nix-build to get us that source:
+```shell
+$ nix-build /nix/store/477ygzwv7vbsmr3dlpr1qzcb6ab6a4wa-aarch64-unknown-linux-android-ghc-8.10.7-configured-src.drv
+```
+this will (by default, we could have passed `--out-link` for a different name) provide us with a symbolic link named `result`, that points to the build artifacts. The build didn’t take any time at all really, because we have that already built and nix just needed to create the result link to the path int he nix store.
+
+9:24 Thus we now have the source from which ghc was built in ./result.
+
+9:26 the relevant code from Elf.c around 812 looks like this:
+```
+    808           addSection(&sections[i], kind, alloc, start, size,
+    809                      mapped_offset, mapped_start, mapped_size);
+    810
+    811 #if defined(NEED_PLT)
+    812           oc->sections[i].info->nstubs = 0;
+    813           oc->sections[i].info->stub_offset = (uint8_t*)mem + size;
+    814           oc->sections[i].info->stub_size = stub_space;
+    815           oc->sections[i].info->stubs = NULL;
+    816 #else
+    817           oc->sections[i].info->nstubs = 0;
+    818           oc->sections[i].info->stub_offset = NULL;
+    819           oc->sections[i].info->stub_size = 0;
+    820           oc->sections[i].info->stubs = NULL;
+    821 #endif
+    822
+```
+
+9:28 if we add the result directory to `gdb` with
+```
+(gdb) directory /path/to/result/
+we also get the source info in gdb
+(gdb) list
+807	#endif
+808	          addSection(&sections[i], kind, alloc, start, size,
+809	                     mapped_offset, mapped_start, mapped_size);
+810
+811	#if defined(NEED_PLT)
+812	          oc->sections[i].info->nstubs = 0;
+813	          oc->sections[i].info->stub_offset = (uint8_t*)mem + size;
+814	          oc->sections[i].info->stub_size = stub_space;
+815	          oc->sections[i].info->stubs = NULL;
+816	#else
+```
+
+9:34 AM I’m not quite sure how this caused a segfault. `oc` seems valid, `oc->sections[i]`  looks valid. And info as well. :confused:  that i is 9598 feels rather brutal though. That’s a lot of sections.
+
+9:44 AM we can ask gdb for he acual disassembly, so le’s see what that is.
+```
+(gdb) disassemble $pc-32,+64
+Dump of assembler code from 0x639800 to 0x639840:
+   0x0000000000639800 <ocGetNames_ELF+680>:	bl	0x61b444 <addSection>
+   0x0000000000639804 <ocGetNames_ELF+684>:	ldr	x8, [x19, #88]
+   0x0000000000639808 <ocGetNames_ELF+688>:	add	x9, x27, x25
+   0x000000000063980c <ocGetNames_ELF+692>:	mov	x0, x19
+   0x0000000000639810 <ocGetNames_ELF+696>:	mov	x1, x27
+   0x0000000000639814 <ocGetNames_ELF+700>:	add	x8, x8, x23
+   0x0000000000639818 <ocGetNames_ELF+704>:	ldr	x8, [x8, #48]
+   0x000000000063981c <ocGetNames_ELF+708>:	mov	w2, w25
+=> 0x0000000000639820 <ocGetNames_ELF+712>:	str	xzr, [x8, #16]
+   0x0000000000639824 <ocGetNames_ELF+716>:	ldr	x8, [x19, #88]
+   0x0000000000639828 <ocGetNames_ELF+720>:	add	x8, x8, x23
+   0x000000000063982c <ocGetNames_ELF+724>:	ldr	x8, [x8, #48]
+   0x0000000000639830 <ocGetNames_ELF+728>:	str	x9, [x8]
+   0x0000000000639834 <ocGetNames_ELF+732>:	ldr	x8, [x19, #88]
+   0x0000000000639838 <ocGetNames_ELF+736>:	add	x8, x8, x23
+   0x000000000063983c <ocGetNames_ELF+740>:	ldr	x8, [x8, #48]
+End of assembler dump.
+```
+
+9:45 so we are trying to store a zero word into x8+16.
+
+9:46 so...
+```
+(gdb) p oc->sections[i].info
+$22 = (struct SectionFormatInfo *) 0x209fbf
+```
+ok, the info struct is at `0x209fbf`, we’d expect his to be `$x8`.
+
+9:46
+```
+(gdb) p/x $x8
+$24 = 0x209fbf
+```
+seems to line up.
+
+9:48 if we print info (and this is uninitialised memory)
+```
+(gdb) p *oc->sections[i].info
+$21 = {stub_offset = 0x29656d616e6f6e28, stub_size = 8390045715513156864, nstubs = 7165064715131969824, stubs = 0x6f20656c62617461,
+  name = 0x2e28207463656a62 <error: Cannot access memory at address 0x2e28207463656a62>, sectionHeader = 0x656c696620296f}
+```
+we see that nstubs is the third element. So an offset of 16 makes sense. (if se assume stub_offset, and stub_size  both hold some 8byte value (int64 like or ptr).
+
+9:50 I’m still quite puzzled why we can’t write to that memory location though.
+
+9:57 AM That’s odd..., so this is addSection which should allocate the info struct.
+```
+/* -----------------------------------------------------------------------------
+ * Section management.
+ */
+void
+addSection (Section *s, SectionKind kind, SectionAlloc alloc,
+            void* start, StgWord size,
+            StgWord mapped_offset, void* mapped_start, StgWord mapped_size)
+{
+   s->start        = start;     /* actual start of section in memory */
+   s->size         = size;      /* actual size of section in memory */
+   s->kind         = kind;
+   s->alloc        = alloc;
+   s->mapped_offset = mapped_offset; /* offset from the image of mapped_start */
+
+   s->mapped_start = mapped_start; /* start of mmap() block */
+   s->mapped_size  = mapped_size;  /* size of mmap() block */
+
+   if (!s->info)
+     s->info
+       = (struct SectionFormatInfo*)stgCallocBytes(1, sizeof *s->info,
+                                            "addSection(SectionFormatInfo)");
+
+   IF_DEBUG(linker,
+            debugBelch("addSection: %p-%p (size %" FMT_Word "), kind %d\n",
+                       start, (void*)((StgWord)start + size),
+                       size, kind ));
+}
+```
+and
+```
+void *
+stgCallocBytes (size_t count, size_t size, char *msg)
+{
+    void *space;
+
+    if ((space = calloc(count, size)) == NULL) {
+      /* don't fflush(stdout); WORKAROUND bug in Linux glibc */
+      rtsConfig.mallocFailHook((W_) count*size, msg);
+      stg_exit(EXIT_INTERNAL_ERROR);
+    }
+    return space;
+}
+```
+so, we call `calloc` on it, that should return zeroed memory, why are we seeing non-zero memory, when the man page tells us this?
+
+> The calloc() function allocates memory for an array of nmemb elements of size bytes each and returns a pointer to the allocated memory. The memory is set to zero. If nmemb or size is 0, then calloc() returns either NULL, or a unique pointer value that can later be successfully passed to free().
+
+9:58 One thing that bionic is different about is it’s use of jemalloc by default.
+
+9:59 [jemallocs manpage](http://jemalloc.net/jemalloc.3.html) reads the same, and yes it would have been quite strange if it behaved differently.
+> The calloc() function allocates space for number objects, each size bytes in length. The result is identical to calling malloc() with an argument of number * size, with the exception that the allocated memory is explicitly initialized to zero bytes.
+
+10:00 We do know this consistenly happens for section 9598. So maybe we can step through `addSection` for that.
+
+10:03 Let’s see if this works:
+```
+(gdb) target remote localhost:1234
+Remote debugging using localhost:1234
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0x0000000000305500 in _start ()
+(gdb) b rts/linker/Elf.c:808 if i == 9598
+Breakpoint 1 at 0x6397e0: file rts/linker/Elf.c, line 808.
+(gdb) c
+```
+
+10:05 GDB in principle has this really amazing reverse debugging feature, where you can ask it to record, and then basically step back and forward, but it is really slow.
+10:06 So once we have some location and still aren’t sure what happened, we might be able to break a bit before the location that is problematic and then start recording just the section we are concerned about. One caveat is that I don’t know if this remote gdb + qemu supports this well.
+
+10:30 AM With breakpoints the run takes even longer. But eventually we’ll be greeted with:
+```
+Breakpoint 1, ocGetNames_ELF (oc=oc@entry=0xb400005501e54500) at rts/linker/Elf.c:808
+808	          addSection(&sections[i], kind, alloc, start, size,
+(gdb)
+```
+
+10:31 if we look at the `sections[i]`, we’ll see the following:
+```
+(gdb) p sections[i]
+$27 = {start = 0x0, size = 12970367291944688592, kind = 2138047, alloc = SECTION_NOMEM, mapped_offset = 0, mapped_start = 0x0, mapped_size = 12970367291944688616, info = 0x209fbf}
+```
+10:32 this is not good. From the above addSection function we see that we will only allocate space for info if it’s `NULL`. So we will never allocate space for info.
+10:33 so, where did we allocate sections then?
+10:35
+```
+    667
+    668    sections = (Section*)stgCallocBytes(sizeof(Section), shnum,
+    669                                        "ocGetNames_ELF(sections)");
+    670    oc->sections = sections;
+    671    oc->n_sections = shnum;
+    672
+from Elf.c
+(gdb) p oc->n_sections
+$32 = 24960 
+```
+ok. This is confusing.
+
+11:49 AM :exploding_head:
+
+11:55 AM Alright, I’ll just keep my notes here, hopefully writing this down will help me understand what’s off.
+We set a break point right after the sections assignment. First hit
+```
+Breakpoint 1, ocGetNames_ELF (oc=oc@entry=0xb400005501e54400) at rts/linker/Elf.c:673
+673     in rts/linker/Elf.c
+(gdb) p *oc
+$32 = {status = OBJECT_LOADED,
+  fileName = 0xb400005501e650c0 "tmp/nix/store/irqmifkzz75ai9x9sdg171760ngsd5cz-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1/libHSghc-prim-0.6.1.a", fileSize = 20480,
+  formatName = 0x20a340 "ELF",
+  archiveMemberName = 0xb400005501e65180 "tmp/nix/store/irqmifkzz75ai9x9sdg171760ngsd5cz-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1/libHSghc-prim-0.6.1.a(CString.o)",
+  symbols = 0x0, n_symbols = 0, image = 0x7fe14d3eb000 "\177ELF\002\001\001", info = 0xb400005501e33050,
+  imageMapped = 1, misalignment = 0, n_sections = 71, sections = 0x0, n_segments = 0, segments = 0x0, next = 0x0,
+  prev = 0x0, next_loaded_object = 0x0, mark = 255, dependencies = 0xb400005501e68000, proddables = 0x0,
+  symbol_extras = 0x7fe14d3f0000, first_symbol_extra = 0, n_symbol_extras = 125,
+  bssBegin = 0x7fe14d3f0000 "PrimopWrappers.o/\n/", bssEnd = 0x7fe14d3f0000 "PrimopWrappers.o/\n/",
+  foreign_exports = 0x0, extraInfos = 0x0, rw_m32 = 0xb400005501e6f000, rx_m32 = 0xb400005501e6f140}
+```
+looking at the n_sections value, this is not the object code we are interested in.
+
+11:56 after continuing, we have a second hit
+```
+(gdb) c
+Continuing.
+
+Breakpoint 1, ocGetNames_ELF (oc=oc@entry=0xb400005501e54500) at rts/linker/Elf.c:673
+673     in rts/linker/Elf.c
+(gdb) p *oc
+$33 = {status = OBJECT_LOADED,
+  fileName = 0xb400005501e65240 "tmp/nix/store/irqmifkzz75ai9x9sdg171760ngsd5cz-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1/libHSghc-prim-0.6.1.a", fileSize = 6148096,
+  formatName = 0x20a340 "ELF",
+  archiveMemberName = 0xb400005501e65300 "tmp/nix/store/irqmifkzz75ai9x9sdg171760ngsd5cz-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1/libHSghc-prim-0.6.1.a(Classes.o)",
+  symbols = 0x0, n_symbols = 0, image = 0x7fe14cdeb000 "\177ELF\002\001\001", info = 0xb400005501e330a0,
+  imageMapped = 1, misalignment = 0, n_sections = 24960, sections = 0x0, n_segments = 0, segments = 0x0, next = 0x0,
+  prev = 0x0, next_loaded_object = 0x0, mark = 255, dependencies = 0xb400005501e6a800, proddables = 0x0,
+  symbol_extras = 0x7fe14d3c8000, first_symbol_extra = 0, n_symbol_extras = 40428, bssBegin = 0x7fe14d3c8000 "",
+  bssEnd = 0x7fe14d3c8000 "", foreign_exports = 0x0, extraInfos = 0x0, rw_m32 = 0xb400005501e6f280,
+  rx_m32 = 0xb400005501e6f3c0}
+```
+this looks like the one we were interested in.
+
+11:59 If we look at the assembly:
+```
+(gdb) disassemble $pc-64,+128
+Dump of assembler code from 0x6395a0 to 0x639620:
+   0x00000000006395a0 <ocGetNames_ELF+72>:      add     x10, x10, x8
+   0x00000000006395a4 <ocGetNames_ELF+76>:      add     x10, x10, #0x18
+   0x00000000006395a8 <ocGetNames_ELF+80>:      ldur    w11, [x10, #-20]
+   0x00000000006395ac <ocGetNames_ELF+84>:      cmp     w11, #0x12
+   0x00000000006395b0 <ocGetNames_ELF+88>:      b.eq    0x639c58 <ocGetNames_ELF+1792>  // b.none
+   0x00000000006395b4 <ocGetNames_ELF+92>:      subs    x9, x9, #0x1
+   0x00000000006395b8 <ocGetNames_ELF+96>:      add     x10, x10, #0x40
+   0x00000000006395bc <ocGetNames_ELF+100>:     b.ne    0x6395a8 <ocGetNames_ELF+80>  // b.any
+   0x00000000006395c0 <ocGetNames_ELF+104>:     str     xzr, [sp, #40]
+   0x00000000006395c4 <ocGetNames_ELF+108>:     cbnz    w20, 0x6395cc <ocGetNames_ELF+116>
+   0x00000000006395c8 <ocGetNames_ELF+112>:     ldr     w20, [x22, #32]
+   0x00000000006395cc <ocGetNames_ELF+116>:     adrp    x2, 0x206000
+   0x00000000006395d0 <ocGetNames_ELF+120>:     add     x2, x2, #0x9
+   0x00000000006395d4 <ocGetNames_ELF+124>:     mov     w0, #0x38                       // #56
+   0x00000000006395d8 <ocGetNames_ELF+128>:     mov     x1, x20
+   0x00000000006395dc <ocGetNames_ELF+132>:     bl      0x620478 <stgCallocBytes>
+=> 0x00000000006395e0 <ocGetNames_ELF+136>:     ldr     w8, [x19, #72]
+   0x00000000006395e4 <ocGetNames_ELF+140>:     str     x0, [sp, #24]
+   0x00000000006395e8 <ocGetNames_ELF+144>:     str     x0, [x19, #88]
+   0x00000000006395ec <ocGetNames_ELF+148>:     str     w20, [x19, #80]
+   0x00000000006395f0 <ocGetNames_ELF+152>:     cbz     w8, 0x639614 <ocGetNames_ELF+188>
+   0x00000000006395f4 <ocGetNames_ELF+156>:     ldr     x0, [x19, #8]
+   0x00000000006395f8 <ocGetNames_ELF+160>:     mov     w1, wzr
+   0x00000000006395fc <ocGetNames_ELF+164>:     bl      0x683e10 <open(char const*, int, ...)>
+   0x0000000000639600 <ocGetNames_ELF+168>:     cmn     w0, #0x1
+   0x0000000000639604 <ocGetNames_ELF+172>:     b.eq    0x639c6c <ocGetNames_ELF+1812>  // b.none
+   0x0000000000639608 <ocGetNames_ELF+176>:     str     w0, [sp, #4]
+   0x000000000063960c <ocGetNames_ELF+180>:     cbnz    w20, 0x639620 <ocGetNames_ELF+200>
+   0x0000000000639610 <ocGetNames_ELF+184>:     b       0x639c24 <ocGetNames_ELF+1740>
+   0x0000000000639614 <ocGetNames_ELF+188>:     mov     w0, #0xffffffff                 // #-1
+   0x0000000000639618 <ocGetNames_ELF+192>:     str     w0, [sp, #4]
+   0x000000000063961c <ocGetNames_ELF+196>:     cbz     w20, 0x639c24 <ocGetNames_ELF+1740>
+```
+we jsut got back from calling `stgCallocBytes`. The first argument to that function was `sizeof(Section)` = `0x38` = `56`, the second argument we pulled from register `x20`. Thst should be `24960`. Sure that lines up
+```
+(gdb) p $x20
+$36 = 24960
+```
+so we should have 56*24960 zero bytes at the returned address.
+
+12:02
+```
+(gdb) p/x $x0
+$38 = 0xb400005503154f40
+(gdb) p sections
+$39 = (Section *) 0xb400005503154f40
+```
+We can read more about the general [procedure call standard for aarch64](https://developer.arm.com/documentation/ihi0055/latest), and it states
+> The first eight registers, r0-r7, are used to pass argument values into a subroutine and to return result values from a function. They may also be used to hold intermediate values within a routine (but, in general, only between subroutine calls).
+
+hence we can expect to get the result from that call back in `$x0`.
+
+12:06 And this is where I’m losing my sanity a little... printing the first 32words from the sections offset.
+```
+(gdb) x/32x sections
+0xb400005503154f40:     0x02e4ac02      0xb4000055      0x00000000      0x00000000
+0xb400005503154f50:     0x00000000      0x00000000      0x02af3530      0xb4000055
+0xb400005503154f60:     0x02e67fea      0xb4000055      0x00000000      0x00000000
+0xb400005503154f70:     0x00000000      0x00000000      0x02af3548      0xb4000055
+0xb400005503154f80:     0x02e60978      0xb4000055      0x00000000      0x00000000
+0xb400005503154f90:     0x00000000      0x00000000      0x02af3560      0xb4000055
+0xb400005503154fa0:     0x02e59306      0xb4000055      0x00000000      0x00000000
+0xb400005503154fb0:     0x00000000      0x00000000      0x02af3578      0xb4000055
+```
+What is this? It should be 56*24960 zeroed bytes. Instead this is some odd sequence of pointers. `0xb400005503154f40`, clearly looks like a memory address (64bit pointer).
+
+12:07 Running this by hand... (having gdb call `stgCallocBytes`) ...
+```
+(gdb) p stgCallocBytes(56, 24960, "")
+$40 = (void *) 0xb4000055032d5d80
+(gdb) x/32x $40
+0xb4000055032d5d80:     0x00000000      0x00000000      0x00000000      0x00000000
+0xb4000055032d5d90:     0x00000000      0x00000000      0x00000000      0x00000000
+0xb4000055032d5da0:     0x00000000      0x00000000      0x00000000      0x00000000
+0xb4000055032d5db0:     0x00000000      0x00000000      0x00000000      0x00000000
+0xb4000055032d5dc0:     0x00000000      0x00000000      0x00000000      0x00000000
+0xb4000055032d5dd0:     0x00000000      0x00000000      0x00000000      0x00000000
+0xb4000055032d5de0:     0x00000000      0x00000000      0x00000000      0x00000000
+0xb4000055032d5df0:     0x00000000      0x00000000      0x00000000      0x00000000
+```
+w.t.f?
+
+12:13 PM omg? [jemalloc/jemalloc#1844](https://giters.com/jemalloc/jemalloc/issues/1844), [qemu-devel/2020-05/msg03119](https://lists.nongnu.org/archive/html/qemu-devel/2020-05/msg03119.html); guess we’ll need some explicit zeroing.
+
+12:16 This is actually pretty bad, now we need to figure out a way around this.
+
+12:17 luckily use is fairly isolated in the rts
+```shell
+$ rg calloc rts
+rts/RtsUtils.c
+104:    if ((space = calloc(count, size)) == NULL) {
+
+rts/Hpc.c
+140:    tmpModule -> tixArr = (StgWord64 *)calloc(tmpModule->tickCount,sizeof(StgWord64));
+
+rts/linker/Elf.c
+851:      // Note calloc: if we fail partway through initializing symbols, we need
+
+rts/linker/elf_plt.c
+54:    Stub * s = calloc(1, sizeof(Stub));
+```
+
+12:18 My idea for fixing this is as follows: we change all calls to calloc to `stgCallocBytes`, and then try to device a good fix for adding an additional `memzero` to `stgCallocBytes`, which we ideally just run if we (detect) we are running under qemu, or know we are using jemalloc.
+
+12:29 PM Let’s see if we can for now just throw this diff into our ghc for android
+```diff
+diff --git a/rts/Hpc.c b/rts/Hpc.c
+index abf8543..fd4a153 100644
+--- a/rts/Hpc.c
++++ b/rts/Hpc.c
+@@ -137,7 +137,7 @@ readTix(void) {
+     tmpModule -> hashNo = (unsigned int)expectWord64();
+     ws();
+     tmpModule -> tickCount = (int)expectWord64();
+-    tmpModule -> tixArr = (StgWord64 *)calloc(tmpModule->tickCount,sizeof(StgWord64));
++    tmpModule -> tixArr = (StgWord64 *)stgCallocBytes(tmpModule->tickCount,sizeof(StgWord64), "Hpc.readTix");
+     ws();
+     expect('[');
+     ws();
+diff --git a/rts/RtsUtils.c b/rts/RtsUtils.c
+index b9ddb2a..c7a4a5a 100644
+--- a/rts/RtsUtils.c
++++ b/rts/RtsUtils.c
+@@ -106,6 +106,11 @@ stgCallocBytes (size_t count, size_t size, char *msg)
+       rtsConfig.mallocFailHook((W_) count*size, msg);
+       stg_exit(EXIT_INTERNAL_ERROR);
+     }
++    // If we run under qemu with jemalloc, calloc is not guaranteed
++    // to zero memory.
++    // - https://giters.com/jemalloc/jemalloc/issues/1844
++    // - https://lists.nongnu.org/archive/html/qemu-devel/2020-05/msg03119.html
++    memset(space, 0, count*size);
+     return space;
+ }
+ 
+diff --git a/rts/linker/elf_plt.c b/rts/linker/elf_plt.c
+index 9cd42ef..70817d8 100644
+--- a/rts/linker/elf_plt.c
++++ b/rts/linker/elf_plt.c
+@@ -1,4 +1,5 @@
+ #include "Rts.h"
++#include "RtsUtils.h"
+ #include "elf_plt.h"
+ 
+ #include <stdbool.h>
+@@ -51,7 +52,7 @@ makeStub(Section * section,
+           void* * addr,
+           uint8_t flags) {
+ 
+-    Stub * s = calloc(1, sizeof(Stub));
++    Stub * s = stgCallocBytes(1, sizeof(Stub), "makeStub");
+     ASSERT(s != NULL);
+     s->target = *addr;
+     s->flags  = flags;
+```
+
+12:39 PM Looks like figuring qemu out at runtime is hard, same for jemalloc. For now we’ll thus stick to just condtionally compile the android rts with an addtional memset. Performance penalty will be there, but it’s hopefully negligible.
+
+12:40 As CI is building this now for us, it’s probably a good time to grab lunch.
+
+2:05 PM so this did go a bit further, but now we have:
+```
+unpacking sources
+unpacking source archive /nix/store/plbjz49p51izx7qnkfh1ha6yrjpzr704-mobile-core-root-lib-mobile-core
+source root is mobile-core-root-lib-mobile-core
+patching sources
+updateAutotoolsGnuConfigScriptsPhase
+configuring
+Configure flags:
+--prefix=/nix/store/q0v2i8nvw0lj0635zhzvah4dr6p5mwxm-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0 lib:mobile-core --package-db=clear --package-db=/nix/store/4fcj2sf4zv7w2x5cwzr4ps70nprkdxch-aarch64-unknown-linux-android-mobile-core-lib-mobile-core-0.1.0.0-config/lib/aarch64-unknown-linux-android-ghc-8.10.7/package.conf.d --exact-configuration --dependency=rts=rts --dependency=ghc-heap=ghc-heap-8.10.7 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=integer-gmp=integer-gmp-1.0.3.0 --dependency=base=base-4.14.3.0 --dependency=deepseq=deepseq-1.4.4.0 --dependency=array=array-0.5.4.0 --dependency=ghc-boot-th=ghc-boot-th-8.10.7 --dependency=pretty=pretty-1.1.3.6 --dependency=template-haskell=template-haskell-2.16.0.0 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=Cabal=Cabal-3.2.1.0 --dependency=array=array-0.5.4.0 --dependency=binary=binary-0.8.8.0 --dependency=bytestring=bytestring-0.10.12.0 --dependency=containers=containers-0.6.5.1 --dependency=directory=directory-1.3.6.0 --dependency=filepath=filepath-1.4.2.1 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=ghc-compact=ghc-compact-0.1.0.0 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=hpc=hpc-0.6.1.0 --dependency=mtl=mtl-2.2.2 --dependency=parsec=parsec-3.1.14.0 --dependency=process=process-1.6.13.2 --dependency=text=text-1.2.4.1 --dependency=time=time-1.9.3 --dependency=transformers=transformers-0.5.6.2 --dependency=unix=unix-2.7.2.2 --with-ghc=aarch64-unknown-linux-android-ghc --with-ghc-pkg=aarch64-unknown-linux-android-ghc-pkg --with-hsc2hs=aarch64-unknown-linux-android-hsc2hs --with-gcc=aarch64-unknown-linux-android-cc --with-ld=aarch64-unknown-linux-android-ld --with-ar=aarch64-unknown-linux-android-ar --with-strip=aarch64-unknown-linux-android-strip --disable-executable-stripping --disable-library-stripping --disable-library-profiling --disable-profiling --enable-static --disable-shared --disable-coverage --enable-library-for-ghci --enable-split-sections --hsc2hs-option=--cross-compile --ghc-option=-fPIC --gcc-option=-fPIC
+Configuring library for mobile-core-0.1.0.0..
+Warning: 'hs-source-dirs: app' directory does not exist.
+Warning: 'hs-source-dirs: c-app' directory does not exist.
+Warning: 'include-dirs: stubs' directory does not exist.
+building
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 7977
+---| remote-iserv should have started on 7977
+Listening on port 7977
+
+<no location info>: error:
+    <command line>: libdl.a is a stub --- use libdl.so instead
+---> killing remote-iserve...
+builder for '/nix/store/p0zfan4gbzjzxy3bwr76y76rlix45ixs-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv' failed with exit code 1
+```
+so libdl is a stub, fair enough. I guess the bigger question is if we really need it.
+
+2:06 huh, so ... this is `libdl_static.cpp`
+```
+/*
+ * Copyright (C) 2007 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#include <dlfcn.h>
+#include <link.h>
+#include <stdlib.h>
+void* dlopen(const char* /*filename*/, int /*flag*/) {
+  return nullptr;
+}
+char* dlerror() {
+  return const_cast<char*>("libdl.a is a stub --- use libdl.so instead");
+}
+void* dlsym(void* /*handle*/, const char* /*symbol*/) {
+  return nullptr;
+}
+void* dlvsym(void* /*handle*/, const char* /*symbol*/, const char* /*version*/) {
+  return nullptr;
+}
+int dladdr(const void* /*addr*/, Dl_info* /*info*/) {
+  return 0;
+}
+int dlclose(void* /*handle*/) {
+  return -1;
+}
+```
+we are for some reason calling `dlerror`, ... but why?
+
+2:23 PM The linker seems to be particularly taxing on aarch64-qemu. Loading objects takes impressively long. Something is special about this libc. even musl cross doesn’t take this long, and has similar contraints.
+
+2:43 PM Ahh! so here’s the full log
+```shell
+$ $SETUP_HS build lib:mobile-core -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-fexternal-interpreter --ghc-option=-pgmi --ghc-option=$PWD/iserv-wrapper --ghc-option=-L/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib --ghc-option=-fPIC --gcc-option=-fPIC
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 7981
+---| remote-iserv should have started on 7981
+[        remote-iserv] Opening socket
+Listening on port 7981
+[        remote-iserv] Starting serv
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: MallocStrings ["This will trigger Template Haskell. Hooray!"]
+[        remote-iserv] writing pipe: [RemotePtr 12970367291930780032]
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: InitLinker
+[        remote-iserv] writing pipe: ()
+[        remote-iserv] reading pipe...
+Need Path: tmp/nix/store/cldmain5pj40f1yk0prgqniim16c7md1-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: AddLibrarySearchPath "tmp/nix/store/cldmain5pj40f1yk0prgqniim16c7md1-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1"
+[        remote-iserv] writing pipe: RemotePtr 0
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LoadArchive "tmp/nix/store/cldmain5pj40f1yk0prgqniim16c7md1-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1/libHSghc-prim-0.6.1.a"
+[        remote-iserv] writing pipe: ()
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: ResolveObjs
+[        remote-iserv] writing pipe: True
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: RemoveLibrarySearchPath (RemotePtr 0)
+[        remote-iserv] writing pipe: False
+[        remote-iserv] reading pipe...
+Need Path: tmp/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: AddLibrarySearchPath "tmp/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib"
+[        remote-iserv] writing pipe: RemotePtr 0
+[        remote-iserv] reading pipe...
+Need Path: tmp/nix/store/cldmain5pj40f1yk0prgqniim16c7md1-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/integer-gmp-1.0.3.0
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: AddLibrarySearchPath "tmp/nix/store/cldmain5pj40f1yk0prgqniim16c7md1-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/integer-gmp-1.0.3.0"
+[        remote-iserv] writing pipe: RemotePtr 0
+[        remote-iserv] reading pipe...
+[        remote-iserv] Need DLL: tmp/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib/libgmp.so
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LoadDLL "tmp/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib/libgmp.so"
+[        remote-iserv] writing pipe: Just "libdl.a is a stub --- use libdl.so instead"
+[        remote-iserv] reading pipe...
+
+<no location info>: error:
+    <command line>: libdl.a is a stub --- use libdl.so instead
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: Shutdown
+[        remote-iserv] serv ended
+[        remote-iserv] Opening socket
+---> killing remote-iserve...
+```
+So we compiled `remote-iserv` into a static binary and as such have the statically linked libdl in there, which does not have support for loading dynamic libraries, which is perfectly fine. However GHC tries to be smart and sees we want to load libgmp, sees it can find `libgmp.so`, and prefers to load that.
+
+2:44 We’ve got two ways to work around this:
+- we could drop dynamic loading logic outright from the rts for android.
+- not build the shared objects for libgmp, and other libraries, so GHC isn’t even tempted to load them.
+
+2:45 While making changes, I’ll disable split-sections for android for now, hoping that will speed up iserv. We probably want to find a good solution for this though, as split sections is fairly essential to get good deadstripping.
+
+2:54 PM Turns out, [I’ve implemented the first option](https://github.com/ghc/ghc/commit/6dae65484f9552239652f743e2303fa17aae953b) a while back already. And we have [a flag for this](https://github.com/input-output-hk/haskell.nix/blob/a57f4f77d811490ac1faf309295ed98d8e1ee6b9/compiler/ghc/default.nix#L122-L126) in haskell.nix.
