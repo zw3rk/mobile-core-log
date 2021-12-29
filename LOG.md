@@ -289,19 +289,19 @@ LibdwPool.o:          Mach-O 64-bit object arm64
 ok. So that looks rather promising. We got aarch64 mach-o files. We should be able to link them into an iOS application. Let’s try this next.
 
 8:46 PM We’ll start Xcode on a mac, and select “Create a new Xcode project”...
-![Screenshot 2021-12-23 at 8.42.09 PM](assets/Screenshot 2021-12-23 at 8.42.09 PM.png) 
+![Screenshot 2021-12-23 at 8.42.09 PM](assets/Screenshot%202021-12-23%20at%208.42.09%20PM.png) 
 
 
 8:47 Next we’ll chose iOS > App as the template.
-![Screenshot 2021-12-23 at 8.42.24 PM](assets/Screenshot 2021-12-23 at 8.42.24 PM.png) 
+![Screenshot 2021-12-23 at 8.42.24 PM](assets/Screenshot%202021-12-23%20at%208.42.24%20PM.png) 
 
 
 8:48 And then fill out the metadata. I’ve restricted it to the bare minimum, that includes leaving out tests. But we are going to use SwiftUI and Swift, because this is how modern apps are supposed to be developed for iOS (according to Apple).
-![Screenshot 2021-12-23 at 8.42.56 PM](assets/Screenshot 2021-12-23 at 8.42.56 PM.png) 
+![Screenshot 2021-12-23 at 8.42.56 PM](assets/Screenshot%202021-12-23%20at%208.42.56%20PM.png) 
 
 
 8:48 And we’ve gout ourself a scaffolded iOS application.
-![Screenshot 2021-12-23 at 8.43.47 PM](assets/Screenshot 2021-12-23 at 8.43.47 PM.png) 
+![Screenshot 2021-12-23 at 8.43.47 PM](assets/Screenshot%202021-12-23%20at%208.43.47%20PM.png) 
 
 
 8:49 If you want to follow along, the code is at github.com:zw3rk/mobile-core-ios
@@ -309,9 +309,9 @@ ok. So that looks rather promising. We got aarch64 mach-o files. We should be ab
 8:52 Because we want to link against some C sources, we need some bridging header to get our C functions available in swift. The easiest way I’ve found to get this right is to go via Menubar > File > New > File...
 And chose some Objective C file, call it Dummy (or anything really), and then delete it.
 3 files 
-![Screenshot 2021-12-23 at 8.50.46 PM](assets/Screenshot 2021-12-23 at 8.50.46 PM.png)
-![Screenshot 2021-12-23 at 8.51.18 PM](assets/Screenshot 2021-12-23 at 8.51.18 PM.png)
-![Screenshot 2021-12-23 at 8.51.27 PM](assets/Screenshot 2021-12-23 at 8.51.27 PM.png)
+![Screenshot 2021-12-23 at 8.50.46 PM](assets/Screenshot%202021-12-23%20at%208.50.46%20PM.png)
+![Screenshot 2021-12-23 at 8.51.18 PM](assets/Screenshot%202021-12-23%20at%208.51.18%20PM.png)
+![Screenshot 2021-12-23 at 8.51.27 PM](assets/Screenshot%202021-12-23%20at%208.51.27%20PM.png)
 
 8:54 We now have a new file in the project called mobile-core-ios-Bridging-Header.h, and we can add our extern c functions to it:
 ```c
@@ -368,12 +368,12 @@ struct ContentView: View {
 9:03 We’ll create a new Group Libraries and add the libgmp.a, libffi.a and libHSmobile-core...a in there.
 
 9:05 Dropping libraries into xcode, makes it usually decide to automatically link those libraries against the target.
-![Screenshot 2021-12-23 at 9.04.50 PM](assets/Screenshot 2021-12-23 at 9.04.50 PM.png) 
+![Screenshot 2021-12-23 at 9.04.50 PM](assets/Screenshot%202021-12-23%20at%209.04.50%20PM.png) 
 
 9:06 but, those libraries are built for aarch64-darwin, and I’m on x86_64-darwin, so there is no way for me to actually test this in the simulator. We could build fat libraries that contain multiple slices for aarch64 and x86_64, but for now, we’ll just restrict ourselves to actually testing this on a real device.
 
 9:10 Thanks to my test device not having been update in a while, I’m greeted with the following information. My device’s iOS is too old. I’ll turn down the deployment target to iOS 14+.
-![Screenshot 2021-12-23 at 9.07.24 PM](assets/Screenshot 2021-12-23 at 9.07.24 PM.png) 
+![Screenshot 2021-12-23 at 9.07.24 PM](assets/Screenshot%202021-12-23%20at%209.07.24%20PM.png) 
 
 
 9:10 Let’s try again...
@@ -508,7 +508,7 @@ Signing for "mobile-core-ios" requires a development team. Select a development 
 Success? Let’s see.
 
 9:48 After setting the Signing Team, it... builds?
-![Screenshot 2021-12-23 at 9.46.18 PM](assets/Screenshot 2021-12-23 at 9.46.18 PM.png) 
+![Screenshot 2021-12-23 at 9.46.18 PM](assets/Screenshot%202021-12-23%20at%209.46.18%20PM.png) 
 
 9:49 Sadly not yet, it fails with
 ```
@@ -539,11 +539,11 @@ So, we are missing libiconv, that’s not so bad, apple provides that.
 9:54 After disabling Bitcode, and adding libiconv, the build suceeds! :tada:
 
 2 files
-![Screenshot 2021-12-23 at 9.51.04 PM](assets/Screenshot 2021-12-23 at 9.51.04 PM.png)
-![Screenshot 2021-12-23 at 9.53.03 PM](assets/Screenshot 2021-12-23 at 9.53.03 PM.png)
+![Screenshot 2021-12-23 at 9.51.04 PM](assets/Screenshot%202021-12-23%20at%209.51.04%20PM.png)
+![Screenshot 2021-12-23 at 9.53.03 PM](assets/Screenshot%202021-12-23%20at%209.53.03%20PM.png)
 
 9:56 It actually runs on the device. (An iPhone 7+ here).
-![Image from iOS 1.png](assets/Image from iOS 1.jpg)
+![Image from iOS 1.png](assets/Image%20from%20iOS%201.jpg)
 
 
 9:58 This seems like a good point to leave it here for today. Guess we “solved” the basic task of getting a haskell library running on an iPhone.
@@ -561,29 +561,29 @@ So, we are missing libiconv, that’s not so bad, apple provides that.
 
 2:54 PM After launching Android Studio, we’ll create a new project, with an empty activity. Select kotlin as language (default) and API 21 as the minimum SDK. Neither the language nor the minimum SDK should pose any issues (I hope).
 4 files 
-![Screenshot 2021-12-25 at 2.49.49 PM](assets/Screenshot 2021-12-25 at 2.49.49 PM.png)
-![Screenshot 2021-12-25 at 2.50.48 PM](assets/Screenshot 2021-12-25 at 2.50.48 PM.png)
-![Screenshot 2021-12-25 at 2.51.00 PM](assets/Screenshot 2021-12-25 at 2.51.00 PM.png)
-![Screenshot 2021-12-25 at 2.52.09 PM](assets/Screenshot 2021-12-25 at 2.52.09 PM.png)
+![Screenshot 2021-12-25 at 2.49.49 PM](assets/Screenshot%202021-12-25%20at%202.49.49%20PM.png)
+![Screenshot 2021-12-25 at 2.50.48 PM](assets/Screenshot%202021-12-25%20at%202.50.48%20PM.png)
+![Screenshot 2021-12-25 at 2.51.00 PM](assets/Screenshot%202021-12-25%20at%202.51.00%20PM.png)
+![Screenshot 2021-12-25 at 2.52.09 PM](assets/Screenshot%202021-12-25%20at%202.52.09%20PM.png)
 
 
 2:56 We can use our hydra build of the mobile-core library for aarch64-android to obtain the libraries we need.  This build was only successful because we didn’t use any TH, and as such could simply cross compile our trivial library.
 
 2:57 Android Studio should now look something like this.
-![Screenshot 2021-12-25 at 2.56.58 PM](assets/Screenshot 2021-12-25 at 2.56.58 PM.png) 
+![Screenshot 2021-12-25 at 2.56.58 PM](assets/Screenshot%202021-12-25%20at%202.56.58%20PM.png) 
 
 
 3:00 Now, to add our haskell library to an android application the easies seem to be to right-click on the “app” in the project tree on the left, and select “Add C++ to module”.
 
 3:01 That will add some CMake and C++ file to our project, both files contain some guidance, notes on how to use it. But we do need to wire our haskell lib up via JNI.
 3 files 
-![Screenshot 2021-12-25 at 2.58.33 PM](assets/Screenshot 2021-12-25 at 2.58.33 PM.png)
-![Screenshot 2021-12-25 at 2.58.40 PM](assets/Screenshot 2021-12-25 at 2.58.40 PM.png)
-![Screenshot 2021-12-25 at 2.59.30 PM](assets/Screenshot 2021-12-25 at 2.59.30 PM.png)
+![Screenshot 2021-12-25 at 2.58.33 PM](assets/Screenshot%202021-12-25%20at%202.58.33%20PM.png)
+![Screenshot 2021-12-25 at 2.58.40 PM](assets/Screenshot%202021-12-25%20at%202.58.40%20PM.png)
+![Screenshot 2021-12-25 at 2.59.30 PM](assets/Screenshot%202021-12-25%20at%202.59.30%20PM.png)
 
 3:08 PM We’ll drop the library files from the `pkg.zip` from hydra, into `libs/arm64-a8v` into the `cpp` folder next to the pre-generated `CMakeLists.txt`.
 3:09 Again, you can follow along with the source at github.com:zw3rk/mobile-core-android
-![Screenshot 2021-12-25 at 3.08.45 PM](assets/Screenshot 2021-12-25 at 3.08.45 PM.png) 
+![Screenshot 2021-12-25 at 3.08.45 PM](assets/Screenshot%202021-12-25%20at%203.08.45%20PM.png) 
 
 
 3:11 If we launch the application (on a device) right, now, nothing much will happen. We’ll just be greeted with a “Hello World!” text. After all, we didn’t link the libraries, nor do provide any integration just yet.
@@ -637,7 +637,7 @@ class MainActivity
 ```
 
 3:22 Now we can use the helpful tooling in Android Studio and click on the red exclamation mark next to the external fun statement.
-![Screenshot 2021-12-25 at 3.20.35 PM](assets/Screenshot 2021-12-25 at 3.20.35 PM.png)
+![Screenshot 2021-12-25 at 3.20.35 PM](assets/Screenshot%202021-12-25%20at%203.20.35%20PM.png)
 
 3:24 That generates the following code in mobile_core_android.cpp
 ```cpp
@@ -979,7 +979,7 @@ As this is run in postConfigure, we are effectively patching up the value we did
 2:30 So let’s fix up that hello() string.
 
 2:32 Our Main Activity has a TextView with an id called example. This is the text, we want to replace with the string from our haskell library.
-![Screenshot 2021-12-26 at 2.30.43 PM](assets/Screenshot 2021-12-26 at 2.30.43 PM.png) 
+![Screenshot 2021-12-26 at 2.30.43 PM](assets/Screenshot%202021-12-26%20at%202.30.43%20PM.png) 
 
 2:33 In our MainActivity.kt file we need to first tell the compiler that there is an external function we want to call, and it returns a String.
 
@@ -999,7 +999,7 @@ external fun hello() : String
 ```
 
 2:36 Android studio will complain that there is no hello external function, and provide us with a quick fix.
-![Screenshot 2021-12-26 at 2.35.55 PM](assets/Screenshot 2021-12-26 at 2.35.55 PM.png) 
+![Screenshot 2021-12-26 at 2.35.55 PM](assets/Screenshot%202021-12-26%20at%202.35.55%20PM.png) 
 
 2:37 This will take us to the mobile_core_android.cpp file and it will also have generated the proper function name for us, all we need to do is fill our the logic.
 2:37 We come up with the following solution:
@@ -1034,7 +1034,7 @@ Java_com_zw3rk_mobile_1core_1android_MainActivityKt_hello(JNIEnv *env, jclass cl
 ```
 
 2:42 And it compiles... and runs. Even on actual android hardware.
-![Image from iOS 2](assets/Image from iOS 2.jpg)
+![Image from iOS 2](assets/Image%20from%20iOS%202.jpg)
 
 :tada:
 
