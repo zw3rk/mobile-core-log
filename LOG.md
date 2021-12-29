@@ -1,4 +1,4 @@
-# A Chritmas Story
+# A Christmas Story
 
 10:46 AM So recap of my new knowledge gained over the weekend:
 - iOS fairly trivial. Just build for macOS, and patch up the objects’ load commands from macOS -> iOS, to get around the linker being overly zealous.
@@ -8,11 +8,11 @@
   - Can’t use glib copiled binaries, they have even more missing symbols
   - Can’t run bionic (android’s libc) compiled binaries, because they are by default dynamic, and linker64 isn’t readily available.
   - Building `linker64` from googles source is a pain. They currently use some soong build tool, that replaced their make files, and will be replaced by bazel.
-  - Building `soong` from source is also near impossible; and barely documented. Yey!
+  - Building `soong` from source is also near impossible; and barely documented. Yay!
   - Building `bionic` libc from source again requires their odd build tool. But maybe one can use the blueprint file to construct a Makefile (by hand).
   - Building static `libc`, `libm`, ... from bionic /should/ allow us to build android executables that just run on linux, as long as we don’t use any android APIs.
-  - Building `linker64` should allow us to run android executables on linux as long as they don’t use any andoird apis.
-  - Maybe we could use cross compiled rts, ... libraries, from an android cross compiler and swap them in for the musl/glibc libraries. Kinda frankensteining the thing together. This would allow us to have a native stage2 compiler (no TH or any other restriciton really), and just fix up the libraries during linking on android.
+  - Building `linker64` should allow us to run android executables on linux as long as they don’t use any android apis.
+  - Maybe we could use cross compiled rts, ... libraries, from an android cross compiler and swap them in for the musl/glibc libraries. Kinda frankensteining the thing together. This would allow us to have a native stage2 compiler (no TH or any other restriction really), and just fix up the libraries during linking on android.
 
 10:46 To be fair, the most “interesting” options are the `linker64` and `bionic` libc builds.
 10:47 The frankensteining thing might work if the cross compiler is technically a stage3 compiler so the ghc abis are stable. But it feels just “wrong”.
@@ -30,7 +30,7 @@ mobile-core (haskell) - contains the business logic
 ```
 The UI will be written using the native UI toolkit, and link the haskell library into the application. Building the UI in haskell by bridging it somehow is out of scope. We could probably also build a cli (brick?) app based on the core component, or a native application using the same approach.
 
-8:14 I don’t have a specific application in mind so far, I’m mostly interested in the technical challenges along the way. Thus my current plan for mile stones is as follows:
+8:14 I don’t have a specific application in mind so far, I’m mostly interested in the technical challenges along the way. Thus my current plan for milestones is as follows:
 ```
 1. Build and link a simple haskell library that returns "Hello from Haskell" as a string, and display that string in the UI.
 2. Extend this with some interactive functionality (e.g. let's compute fib, or something based on an input field and button)
@@ -39,7 +39,7 @@ The UI will be written using the native UI toolkit, and link the haskell library
 ```
 
 8:18 For technology, we’ll be using nix and hydra to build the mobile-core, and have it produce packages that contain static libraries of the core component. For iOS we’ll use Xcode, and for Android we’ll use Android Studio. We’ll not build iOS or Android in CI (for now at least).
-Why use nix and hydra? Simply because it will allow us to have native access to aarch64-darwin, x86_64-darwin, aarch64-linux and x86_64-linux machines without having to set this up locally.  Nix also comes with farily useable cross compilation capaiblities, so it will make dealing with SDKs much easier, and lets us focus on the technical challenges that haskell poses, instead of dealing with toolchain and other issues that would just take a lot of time, and are easy to get wrong.
+Why use nix and hydra? Simply because it will allow us to have native access to aarch64-darwin, x86_64-darwin, aarch64-linux and x86_64-linux machines without having to set this up locally.  Nix also comes with farily useable cross compilation capabilities, so it will make dealing with SDKs much easier, and lets us focus on the technical challenges that haskell poses, instead of dealing with toolchain and other issues that would just take a lot of time, and are easy to get wrong.
 
 8:19 This also allows us to leverage IOGs haskell.nix infrastructure, which has fairly good cross compilation support so far, but none really for mobile yet.
 
@@ -99,11 +99,11 @@ int main(int argc, char ** argv) {
 and compile this, what actually happens?
 
 9:21 AM The compiler will first parse the code, turn it into some abstract syntax tree, likely do some transformations on it, and turn it into a lower level representation (also often referred to as “lowering”) a few times until we end up with effectively an assembly printer (or in some cases a direct instruction printer). For assembly we can feed that into an assembler (the `as` program), to get a byte stream of instructions. These instructions are specific to the CPU we are targeting, so most likely x86_64 or aarch64. The computer will load those instruction in chunks into the cache, and then churn through the instructions.  Again the CPU internally will likely decode the bytes that represent the instructions into some internal representation, but this part we will never see as it’s CPU specific.
-So turn Text into Instructiosn and encode them into sequences of Bytes which the computer loads into the cache and the CPU then runs.
+So turn Text into Instructions and encode them into sequences of Bytes which the computer loads into the cache and the CPU then runs.
 
 But wait, the CPU is already running our host operating system (Windows, Linux, macOS, ...), how can we have it execute our instructions?
 
-9:24 If we are writing our own bare metal software/operating system this isn’t much of a problem, there will be some predefined offsets where the comptuer expects to read its first instructions off of, so we’d just need to work with the bootloader to make sure it puts our instructions into the right place. We can just throw the raw instructions there, and call it a day. But for a program running on a host operating system, we need to work with that operating system.
+9:24 If we are writing our own bare metal software/operating system this isn’t much of a problem, there will be some predefined offsets where the computer expects to read its first instructions off of, so we’d just need to work with the bootloader to make sure it puts our instructions into the right place. We can just throw the raw instructions there, and call it a day. But for a program running on a host operating system, we need to work with that operating system.
 
 9:26 Side note, there is the compiler explorer (https://godbolt.org/), which is really helpful if you want to explore how compilers turn applications into assembly.
 
@@ -300,7 +300,7 @@ ok. So that looks rather promising. We got aarch64 mach-o files. We should be ab
 ![Screenshot 2021-12-23 at 8.42.56 PM](assets/Screenshot%202021-12-23%20at%208.42.56%20PM.png) 
 
 
-8:48 And we’ve gout ourself a scaffolded iOS application.
+8:48 And we’ve got ourself a scaffolded iOS application.
 ![Screenshot 2021-12-23 at 8.43.47 PM](assets/Screenshot%202021-12-23%20at%208.43.47%20PM.png) 
 
 
