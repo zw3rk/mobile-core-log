@@ -19,7 +19,7 @@
 
 8:00 PM For clarification, we want to build fully native applications for iOS devices and Android devices. We’ll focus on aarch64, for now. That’s pretty much exclusively what Apples mobile hardware runs at this point. For Android we’d have to consider aarch64, aarch32, x86_64, mips, risc-v, and potentially a few more other platforms. We’ll restrict ourselves to aarch64 (and maybe x86_64) for now. A stretch goal is to maybe also produce some javascript web application from the same source code.
 
-8:00 We’ll restrict ourselves to ghc 8.10.7 for now as well, as that’s what we basically have properly integrated. (edited) 
+8:00 We’ll restrict ourselves to ghc 8.10.7 for now as well, as that’s what we basically have properly integrated.  
 
 8:09 PM The general idea for the architecture is the following
 ```
@@ -1163,7 +1163,7 @@ Hi from aarch64-bionic
 ```
 :tada:
 
-6:07 So, we’ll next try to statically link the ghc-iserv binary we build for android. (probably in a few hours, or maybe tomorrow). (edited) 
+6:07 So, we’ll next try to statically link the ghc-iserv binary we build for android. (probably in a few hours, or maybe tomorrow).  
 6:12 One quick note for now though. If we look at the CI build results for the change to the Lib.hs, which triggered the failure for the android build (aarch64-android:lib:mobile-core:smallAddressSpace.x86_64-linux), we see that the darwin build (lib:mobile-core:smallAddressSpace:static.aarch64-darwin) succeeded. Why is that? The key here is that for darwin we build natively on aarch64-macos. This means we don’t cross compile and have a full stage2 compiler at our disposal, for android however, we don’t have a full stage2 compiler running on aarch64-linux-bionic, as we don’t have such a system readily available; and thus have to resort to cross compilation.
 
 8:46 PM So we can see remote-iserv failing, let’s try to get an idea what that executable that fails actually is. We’ll use nix-shell again.
@@ -1222,7 +1222,7 @@ remote-iserv: error while loading shared libraries: remote-iserv: cannot open sh
 ```
 this looks like some fairly frankensteined executable.
 
-9:07 Let’s see how that remote-iserv is actually built. The CI (hydra) allows us to inspect the “Build dependencies” quickly. (nix-store -q --tree /path/to/drv should do the same on the command line). (edited) 
+9:07 Let’s see how that remote-iserv is actually built. The CI (hydra) allows us to inspect the “Build dependencies” quickly. (nix-store -q --tree /path/to/drv should do the same on the command line).  
 9:12 From there we’ll find the following derivation /nix/store/6hfk11qxd52gkcimnz923cjx7ibgfvyq-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7.drv, and corresponding build log. The build log is fairly sparse, so we’ll (again) use nix-shell to get more insight into what’s actually happening.
 9:13 From the env again we grab (grep) the build command, and re-run it with added verbosity:
 ```shell
@@ -1306,7 +1306,7 @@ crtbegin.o          crtbegin_so.o  crtbeginT.o        crtend.o          crtend_s
 ```
 so that’s where dl, m and c are. Alright.
 
-9:25 So how can we force the -static from from for remote-iserv? We want to pass a flag specifically to the linker. Luckily GHC has an option for that: -optl (edited) 
+9:25 So how can we force the -static from from for remote-iserv? We want to pass a flag specifically to the linker. Luckily GHC has an option for that: -optl  
 
 9:31 PM Thus if we add an extra configuration flag as --ghc-option=-optl-static to configure, this should force it to be static.
 
@@ -1521,7 +1521,7 @@ so, we write the linker into a nix-support/dynamic-linker file, and create nix-s
 
 10:53 Ok, short response-file detour.
 
-10:54 If we pass argument to executables, we usually talke about executable --arg1 --arg2 x y z and so on. Now the space we have available for that string or arguments we can pass to an executable (this is what ends up in the argv and argc values) can be system dependent, and is not infinite. So how do we get around this if we need to pass a lot of arguments? The idea is to pass a file instead of the arguments with a special syntax. The syntax for response files is @/path/to/file, and the program will then read that file, and parse the arguments from that file. This of course means the program actually needs to support this response file feature and it’s up to the developer to support it. gcc and clang as well as most of the toolchains do support this, simply because passing library paths, library names, include paths, ... can become very long very fast, and thus they are running into maximum argument length limits fast. (edited) 
+10:54 If we pass argument to executables, we usually talke about executable --arg1 --arg2 x y z and so on. Now the space we have available for that string or arguments we can pass to an executable (this is what ends up in the argv and argc values) can be system dependent, and is not infinite. So how do we get around this if we need to pass a lot of arguments? The idea is to pass a file instead of the arguments with a special syntax. The syntax for response files is @/path/to/file, and the program will then read that file, and parse the arguments from that file. This of course means the program actually needs to support this response file feature and it’s up to the developer to support it. gcc and clang as well as most of the toolchains do support this, simply because passing library paths, library names, include paths, ... can become very long very fast, and thus they are running into maximum argument length limits fast.  
 
 10:58 There is a tiny amusement here: while gcc does support response files, it internally passes arguments as non-response files to subprocesses (e.g. collect2), this has the brilliant effect of gcc support arbitrary long arguments via response files, but really being limited by the maximum argument size internally.  Thus one has to be very careful not to pass too many arguments (or work around their length) to gcc, that it would internally forward to collect2.  :facepalm:
 
@@ -2243,3 +2243,1012 @@ So we compiled `remote-iserv` into a static binary and as such have the statical
 2:45 While making changes, I’ll disable split-sections for android for now, hoping that will speed up iserv. We probably want to find a good solution for this though, as split sections is fairly essential to get good deadstripping.
 
 2:54 PM Turns out, [I’ve implemented the first option](https://github.com/ghc/ghc/commit/6dae65484f9552239652f743e2303fa17aae953b) a while back already. And we have [a flag for this](https://github.com/input-output-hk/haskell.nix/blob/a57f4f77d811490ac1faf309295ed98d8e1ee6b9/compiler/ghc/default.nix#L122-L126) in haskell.nix.
+
+4:01 Alright, so changing the split-sections has improved performance noticeably. It went down from 30+min to ~90s to failure.
+
+4:02 We now see
+```
+unpacking sources
+unpacking source archive /nix/store/plbjz49p51izx7qnkfh1ha6yrjpzr704-mobile-core-root-lib-mobile-core
+source root is mobile-core-root-lib-mobile-core
+patching sources
+updateAutotoolsGnuConfigScriptsPhase
+configuring
+Configure flags:
+--prefix=/nix/store/r4rfj2ai21lh6d1i383aks16a63vd5iq-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0 lib:mobile-core --package-db=clear --package-db=/nix/store/hsip6xq24w8zdlw5vxz5d6bh6yccpw17-aarch64-unknown-linux-android-mobile-core-lib-mobile-core-0.1.0.0-config/lib/aarch64-unknown-linux-android-ghc-8.10.7/package.conf.d --exact-configuration --dependency=rts=rts --dependency=ghc-heap=ghc-heap-8.10.7 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=integer-gmp=integer-gmp-1.0.3.0 --dependency=base=base-4.14.3.0 --dependency=deepseq=deepseq-1.4.4.0 --dependency=array=array-0.5.4.0 --dependency=ghc-boot-th=ghc-boot-th-8.10.7 --dependency=pretty=pretty-1.1.3.6 --dependency=template-haskell=template-haskell-2.16.0.0 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=Cabal=Cabal-3.2.1.0 --dependency=array=array-0.5.4.0 --dependency=binary=binary-0.8.8.0 --dependency=bytestring=bytestring-0.10.12.0 --dependency=containers=containers-0.6.5.1 --dependency=directory=directory-1.3.6.0 --dependency=filepath=filepath-1.4.2.1 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=ghc-compact=ghc-compact-0.1.0.0 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=hpc=hpc-0.6.1.0 --dependency=mtl=mtl-2.2.2 --dependency=parsec=parsec-3.1.14.0 --dependency=process=process-1.6.13.2 --dependency=text=text-1.2.4.1 --dependency=time=time-1.9.3 --dependency=transformers=transformers-0.5.6.2 --dependency=unix=unix-2.7.2.2 --with-ghc=aarch64-unknown-linux-android-ghc --with-ghc-pkg=aarch64-unknown-linux-android-ghc-pkg --with-hsc2hs=aarch64-unknown-linux-android-hsc2hs --with-gcc=aarch64-unknown-linux-android-cc --with-ld=aarch64-unknown-linux-android-ld --with-ar=aarch64-unknown-linux-android-ar --with-strip=aarch64-unknown-linux-android-strip --disable-executable-stripping --disable-library-stripping --disable-library-profiling --disable-profiling --enable-static --disable-shared --disable-coverage --enable-library-for-ghci --enable-split-sections --hsc2hs-option=--cross-compile --ghc-option=-fPIC --gcc-option=-fPIC
+Configuring library for mobile-core-0.1.0.0..
+Warning: 'hs-source-dirs: app' directory does not exist.
+Warning: 'hs-source-dirs: c-app' directory does not exist.
+Warning: 'include-dirs: stubs' directory does not exist.
+building
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 5255
+---| remote-iserv should have started on 5255
+Listening on port 5255
+remote-iserv: Failed to lookup symbol: __stack_chk_fail
+remote-iserv: Failed to lookup symbol: __gmpn_mod_1
+remote-iserv: Failed to lookup symbol: base_GHCziNatural_minusNatural_closure
+remote-iserv: Failed to lookup symbol: base_GHCziNum_fromInteger_info
+remote-iserv: Failed to lookup symbol: base_GHCziList_any_info
+remote-iserv: Failed to lookup symbol: base_DataziOldList_intercalatezuzdspolyzugo1_info
+remote-iserv: Failed to lookup symbol: base_GHCziException_errorCallException_closure
+remote-iserv: Failed to lookup symbol: base_GHCziErr_errorWithoutStackTrace_closure
+remote-iserv: Failed to lookup symbol: base_DataziEither_Left_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziExceptionziBase_absentError_closure
+remote-iserv: Failed to lookup symbol: base_GHCziBase_eqString_info
+remote-iserv: Failed to lookup symbol: base_DataziTypeziCoercion_Coercion_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziCategory_CZCCategory_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziArrow_arr_info
+remote-iserv: Failed to lookup symbol: base_ControlziApplicative_zdtcWrappedArrow1_closure
+remote-iserv: ^^ Could not load 'base_DataziData_zdfDataChar_closure', dependency unresolved. See top entry above.
+
+<no location info>: error:
+
+ByteCodeLink.lookupCE
+During interactive linking, GHCi couldn't find the following symbol:
+  base_DataziData_zdfDataChar_closure
+This may be due to you not asking GHCi to load extra object files,
+archives or DLLs needed by your current session.  Restart GHCi, specifying
+the missing library using the -L/path/to/object/dir and -lmissinglibname
+flags, or simply by naming the relevant files on the GHCi command line.
+Alternatively, this link failure might indicate a bug in GHCi.
+If you suspect the latter, please report this as a GHC bug:
+  https://www.haskell.org/ghc/reportabug
+
+---> killing remote-iserve...
+builder for '/nix/store/1w05hwycxn37arvf562x4q40imzzw473-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv' failed with exit code 1
+```
+As expected we are not loading libgmp from a static archive. And that one fails, due to the mising fortification. E.g. `_stack_chk_fail` is missing. 
+
+4:03 The easiest will likely be to just disable fortification on the gmp build.
+
+4:21 PM What exactly is happening here? If we again take the derivation and add the `-v` flag to `iserv-wrapper`, we get a more detailed picture:
+```shell
+$ $SETUP_HS build lib:mobile-core -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-fexternal-interpreter --ghc-option=-pgmi --ghc-option=$PWD/iserv-wrapper --ghc-option=-L/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib --ghc-option=-fPIC --gcc-option=-fPIC
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 9469
+---| remote-iserv should have started on 9469
+[        remote-iserv] Opening socket
+Listening on port 9469
+[        remote-iserv] Starting serv
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: MallocStrings ["This will trigger Template Haskell. Hooray!"]
+[        remote-iserv] writing pipe: [RemotePtr 12970367291930780032]
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: InitLinker
+[        remote-iserv] writing pipe: ()
+[        remote-iserv] reading pipe...
+Need Path: tmp/nix/store/1im00cavjaqzyyjjyxn2m0q077ivwsg4-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: AddLibrarySearchPath "tmp/nix/store/1im00cavjaqzyyjjyxn2m0q077ivwsg4-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1"
+[        remote-iserv] writing pipe: RemotePtr 0
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LoadArchive "tmp/nix/store/1im00cavjaqzyyjjyxn2m0q077ivwsg4-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/ghc-prim-0.6.1/libHSghc-prim-0.6.1.a"
+[        remote-iserv] writing pipe: ()
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: ResolveObjs
+[        remote-iserv] writing pipe: True
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: RemoveLibrarySearchPath (RemotePtr 0)
+[        remote-iserv] writing pipe: False
+[        remote-iserv] reading pipe...
+Need Path: tmp/nix/store/1im00cavjaqzyyjjyxn2m0q077ivwsg4-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/integer-gmp-1.0.3.0
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: AddLibrarySearchPath "tmp/nix/store/1im00cavjaqzyyjjyxn2m0q077ivwsg4-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/integer-gmp-1.0.3.0"
+[        remote-iserv] writing pipe: RemotePtr 0
+[        remote-iserv] reading pipe...
+Need Path: tmp/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: AddLibrarySearchPath "tmp/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib"
+[        remote-iserv] writing pipe: RemotePtr 0
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LoadArchive "tmp/nix/store/1im00cavjaqzyyjjyxn2m0q077ivwsg4-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/integer-gmp-1.0.3.0/libHSinteger-gmp-1.0.3.0.a"
+[        remote-iserv] writing pipe: ()
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LoadArchive "tmp/nix/store/nsx93cjkd11my4dikrqwhv6isxincdgx-gmp-6.2.1-aarch64-unknown-linux-android/lib/libgmp.a"
+[        remote-iserv] writing pipe: ()
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: ResolveObjs
+[        remote-iserv] writing pipe: True
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: RemoveLibrarySearchPath (RemotePtr 0)
+[        remote-iserv] writing pipe: False
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: RemoveLibrarySearchPath (RemotePtr 0)
+[        remote-iserv] writing pipe: False
+[        remote-iserv] reading pipe...
+Need Path: tmp/nix/store/1im00cavjaqzyyjjyxn2m0q077ivwsg4-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/base-4.14.3.0
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: AddLibrarySearchPath "tmp/nix/store/1im00cavjaqzyyjjyxn2m0q077ivwsg4-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/base-4.14.3.0"
+[        remote-iserv] writing pipe: RemotePtr 0
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LoadArchive "tmp/nix/store/1im00cavjaqzyyjjyxn2m0q077ivwsg4-aarch64-unknown-linux-android-ghc-8.10.7/lib/aarch64-unknown-linux-android-ghc-8.10.7/base-4.14.3.0/libHSbase-4.14.3.0.a"
+[        remote-iserv] writing pipe: ()
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: ResolveObjs
+[        remote-iserv] writing pipe: True
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: RemoveLibrarySearchPath (RemotePtr 0)
+[        remote-iserv] writing pipe: False
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: ResolveObjs
+[        remote-iserv] writing pipe: True
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LookupSymbol "ghczmprim_GHCziCString_unpackCStringzh_closure"
+[        remote-iserv] writing pipe: Just (RemotePtr 25010184)
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LookupSymbol "base_DataziData_zdfDataChar_closure"
+remote-iserv: Failed to lookup symbol: __stack_chk_fail
+remote-iserv: Failed to lookup symbol: __gmpn_mod_1
+remote-iserv: Failed to lookup symbol: base_GHCziNatural_minusNatural_closure
+remote-iserv: Failed to lookup symbol: base_GHCziNum_fromInteger_info
+remote-iserv: Failed to lookup symbol: base_GHCziList_any_info
+remote-iserv: Failed to lookup symbol: base_DataziOldList_intercalatezuzdspolyzugo1_info
+remote-iserv: Failed to lookup symbol: base_GHCziException_errorCallException_closure
+remote-iserv: Failed to lookup symbol: base_GHCziErr_errorWithoutStackTrace_closure
+remote-iserv: Failed to lookup symbol: base_DataziEither_Left_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziExceptionziBase_absentError_closure
+remote-iserv: Failed to lookup symbol: base_GHCziBase_eqString_info
+remote-iserv: Failed to lookup symbol: base_DataziTypeziCoercion_Coercion_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziCategory_CZCCategory_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziArrow_arr_info
+remote-iserv: Failed to lookup symbol: base_ControlziApplicative_zdtcWrappedArrow1_closure
+remote-iserv: ^^ Could not load 'base_DataziData_zdfDataChar_closure', dependency unresolved. See top entry above.
+[        remote-iserv] writing pipe: Nothing
+[        remote-iserv] reading pipe...
+
+<no location info>: error:
+
+ByteCodeLink.lookupCE
+During interactive linking, GHCi couldn't find the following symbol:
+  base_DataziData_zdfDataChar_closure
+This may be due to you not asking GHCi to load extra object files,
+archives or DLLs needed by your current session.  Restart GHCi, specifying
+the missing library using the -L/path/to/object/dir and -lmissinglibname
+flags, or simply by naming the relevant files on the GHCi command line.
+Alternatively, this link failure might indicate a bug in GHCi.
+If you suspect the latter, please report this as a GHC bug:
+  https://www.haskell.org/ghc/reportabug
+
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: Shutdown
+[        remote-iserv] serv ended
+[        remote-iserv] Opening socket
+---> killing remote-iserve...
+```
+from this we can see that we loaded `ghc-prim`, `integer-gmp`, `libgmp`. and then `base`. After that we try to get handles for `ghczmprim_GHCziCString_unpackCStringzh_closure`, which succeeds, next we try to get `base_DataziData_zdfDataChar_closure`, and we can see how that basically starts pulling a bunch of dependent symbols. This ultimately ends at `_gmpn_mod_1` which in turn needs `__stack_chk_fail`. And we simply don’t know where that symbol is. (It’s most likely in `libgcc` or a similar compiler builtins library).
+
+4:23 Now a common theme in GHC (which is pretty fragile!) is to have the `rts` have a list of those symbols in a long list. During compilation the compiler will have to link that symbol (as the `rts` depends on it), and the `rts` now knows where that symbol is, and can pre-populate it’s symbol lookup cache with that set of symbols.
+
+4:24 For the curious, this is the relevant file in the rts as of 8.10.7: [rts/RtsSymbols.c](https://github.com/ghc/ghc/blob/e28dba7ed6cd4a24f738ff009508e7823793c241/rts/RtsSymbols.c)
+
+7:09 PM Now it's failing due to `abort()` something seems off. I think I'm a muppet. We've fixed this before. Why doesn't `prim` load `libc`
+
+7:10 Maybe [libraries/ghc-prim/ghc-prim.cabal#L70-L73](https://github.com/ghc/ghc/blob/e28dba7ed6cd4a24f738ff009508e7823793c241/libraries/ghc-prim/ghc-prim.cabal#L70-L73) doesn't hold for android. Oh, I have a bad feeling about this.
+
+9:36 PM After re-reading what I wrote. I need to make a correction: `__stack_chk_fail` is not fortify but stackprotector hardening.
+
+10:35 PM Ohh my... and now another kind of crash, no segfault though...
+```
+unpacking sources
+unpacking source archive /nix/store/plbjz49p51izx7qnkfh1ha6yrjpzr704-mobile-core-root-lib-mobile-core
+source root is mobile-core-root-lib-mobile-core
+patching sources
+updateAutotoolsGnuConfigScriptsPhase
+configuring
+Configure flags:
+--prefix=/nix/store/k2ivc7f9sdj3b20fx173qf5khq8w492q-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0 lib:mobile-core --package-db=clear --package-db=/nix/store/l57lh77dfxzlm8zlaxxvcl3p6xls453c-aarch64-unknown-linux-android-mobile-core-lib-mobile-core-0.1.0.0-config/lib/aarch64-unknown-linux-android-ghc-8.10.7/package.conf.d --exact-configuration --dependency=rts=rts --dependency=ghc-heap=ghc-heap-8.10.7 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=integer-gmp=integer-gmp-1.0.3.0 --dependency=base=base-4.14.3.0 --dependency=deepseq=deepseq-1.4.4.0 --dependency=array=array-0.5.4.0 --dependency=ghc-boot-th=ghc-boot-th-8.10.7 --dependency=pretty=pretty-1.1.3.6 --dependency=template-haskell=template-haskell-2.16.0.0 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=Cabal=Cabal-3.2.1.0 --dependency=array=array-0.5.4.0 --dependency=binary=binary-0.8.8.0 --dependency=bytestring=bytestring-0.10.12.0 --dependency=containers=containers-0.6.5.1 --dependency=directory=directory-1.3.6.0 --dependency=filepath=filepath-1.4.2.1 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=ghc-compact=ghc-compact-0.1.0.0 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=hpc=hpc-0.6.1.0 --dependency=mtl=mtl-2.2.2 --dependency=parsec=parsec-3.1.14.0 --dependency=process=process-1.6.13.2 --dependency=text=text-1.2.4.1 --dependency=time=time-1.9.3 --dependency=transformers=transformers-0.5.6.2 --dependency=unix=unix-2.7.2.2 --with-ghc=aarch64-unknown-linux-android-ghc --with-ghc-pkg=aarch64-unknown-linux-android-ghc-pkg --with-hsc2hs=aarch64-unknown-linux-android-hsc2hs --with-gcc=aarch64-unknown-linux-android-cc --with-ld=aarch64-unknown-linux-android-ld --with-ar=aarch64-unknown-linux-android-ar --with-strip=aarch64-unknown-linux-android-strip --disable-executable-stripping --disable-library-stripping --disable-library-profiling --disable-profiling --enable-static --disable-shared --disable-coverage --enable-library-for-ghci --enable-split-sections --hsc2hs-option=--cross-compile --ghc-option=-fPIC --gcc-option=-fPIC --ghc-options=-staticlib
+Configuring library for mobile-core-0.1.0.0..
+Warning: 'hs-source-dirs: app' directory does not exist.
+Warning: 'hs-source-dirs: c-app' directory does not exist.
+Warning: 'include-dirs: stubs' directory does not exist.
+building
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 8676
+---| remote-iserv should have started on 8676
+Listening on port 8676
+qemu: uncaught target signal 6 (Aborted) - core dumped
+iserv-proxy: {handle: <socket: 6>}: GHCi.Message.remoteCall: end of file
+/nix/store/ijpjw26ypchx25bd09c5h52bybw70knj-iserv-wrapper/bin/iserv-wrapper: line 10:   170 Aborted                 (core dumped) /nix/store/5ca9ws9hj9isc7x5iq542szbzdyvrnyg-qemu-6.1.0/bin/qemu-aarch64 /nix/store/c2xag9rkbailg8n03xz8iqyfa0am95i4-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv tmp $PORT
+
+<no location info>: error: ghc: ghc-iserv terminated (1)
+
+builder for '/nix/store/gvbad9j5ci7mfwpac8lhinc1biaj9a7i-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv' failed with exit code 1
+```
+10:39 ... looks like it happens somewhere during the symbol lookup. Guess we’ll be running a gdb session tomorrow again.
+
+11:06 PM cool, we hit some relocation bug (remember we talked about relocations the other day?)
+```
+(gdb) bt
+#0  abort () at bionic/libc/bionic/abort.cpp:50
+#1  0x00000000012b3790 in relocateObjectCodeAarch64 (oc=oc@entry=0xb40000550428a500)
+    at rts/linker/elf_reloc_aarch64.c:253
+#2  0x00000000012b3028 in relocateObjectCode (oc=0x0, oc@entry=0xb40000550428a500) at rts/linker/elf_reloc.c:12
+#3  0x00000000012b25e0 in ocResolve_ELF (oc=oc@entry=0xb40000550428a500) at rts/linker/Elf.c:1896
+#4  0x0000000001291ab8 in ocTryLoad (oc=0xb40000550428a500) at rts/Linker.c:1744
+#5  0x0000000001291964 in loadSymbol (lbl=0x3006417 "_exit", pinfo=0xb400005504f2af60) at rts/Linker.c:926
+#6  lookupDependentSymbol (lbl=0x3006417 "_exit", dependent=dependent@entry=0xb400005504019900) at rts/Linker.c:906
+#7  0x00000000012b2c58 in fillGot (oc=oc@entry=0xb400005504019900) at rts/linker/elf_got.c:94
+#8  0x00000000012b25d4 in ocResolve_ELF (oc=oc@entry=0xb400005504019900) at rts/linker/Elf.c:1887
+#9  0x0000000001291ab8 in ocTryLoad (oc=0xb400005504019900) at rts/Linker.c:1744
+#10 0x0000000001291964 in loadSymbol (lbl=0x4b915bc "abort", pinfo=0xb40000550401c380) at rts/Linker.c:926
+#11 lookupDependentSymbol (lbl=0x4b915bc "abort", dependent=dependent@entry=0xb400005505c12900) at rts/Linker.c:906
+#12 0x00000000012b2c58 in fillGot (oc=oc@entry=0xb400005505c12900) at rts/linker/elf_got.c:94
+#13 0x00000000012b25d4 in ocResolve_ELF (oc=oc@entry=0xb400005505c12900) at rts/linker/Elf.c:1887
+#14 0x0000000001291ab8 in ocTryLoad (oc=0xb400005505c12900) at rts/Linker.c:1744
+#15 0x0000000001291964 in loadSymbol (lbl=0x4bb7307 "__gmp_allocate_func", pinfo=0xb400005505d0cc00)
+    at rts/Linker.c:926
+#16 lookupDependentSymbol (lbl=0x4bb7307 "__gmp_allocate_func", dependent=dependent@entry=0xb400005505d53400)
+    at rts/Linker.c:906
+#17 0x00000000012b2c58 in fillGot (oc=oc@entry=0xb400005505d53400) at rts/linker/elf_got.c:94
+#18 0x00000000012b25d4 in ocResolve_ELF (oc=oc@entry=0xb400005505d53400) at rts/linker/Elf.c:1887
+#19 0x0000000001291ab8 in ocTryLoad (oc=0xb400005505d53400) at rts/Linker.c:1744
+#20 0x0000000001291964 in loadSymbol (lbl=0x508d3cd "__gmp_tmp_reentrant_alloc", pinfo=0xb400005505d68040)
+    at rts/Linker.c:926
+I’m not so sure the line is fully correct
+    224         case COMPAT_R_AARCH64_JUMP26:
+    225         case COMPAT_R_AARCH64_CALL26: {
+    226             // S+A-P
+    227             int64_t V = S + A - P;
+    228             /* note: we are encoding bits [27:2] */
+    229             if(!isInt64(26+2, V)) {
+    230                 // Note [PC bias aarch64]
+    231                 // There is no PC bias to accommodate in the
+    232                 // relocation of a place containing an instruction
+    233                 // that formulates a PC-relative address. The program
+    234                 // counter reflects the address of the currently
+    235                 // executing instruction.
+    236
+    237                 /* need a stub */
+    238                 /* check if we already have that stub */
+    239                 if(findStub(section, (void**)&S, 0)) {
+    240                     /* did not find it. Crete a new stub. */
+    241                     if(makeStub(section, (void**)&S, 0)) {
+    242                         abort(/* could not find or make stub */);
+    243                     }
+    244                 }
+    245
+    246                 assert(0 == (0xffff000000000000 & S));
+    247                 V = S + A - P;
+    248                 assert(isInt64(26+2, V)); /* X in range */
+    249             }
+    250             return V;
+    251         }
+    252         case COMPAT_R_AARCH64_LDST128_ABS_LO12_NC: assert(0 == ((S+A) & 0x0f));
+    253         case COMPAT_R_AARCH64_LDST64_ABS_LO12_NC:  assert(0 == ((S+A) & 0x07));
+    254         case COMPAT_R_AARCH64_LDST32_ABS_LO12_NC:  assert(0 == ((S+A) & 0x03));
+    255         case COMPAT_R_AARCH64_LDST16_ABS_LO12_NC:  assert(0 == ((S+A) & 0x01));
+    256         case COMPAT_R_AARCH64_LDST8_ABS_LO12_NC:
+    257             /* type: static, class: aarch64, op: S + A */
+    258             return (S + A) & 0xfff;
+    259
+```
+11:07 It’s somewhat ironic that we run into abort while trying to relocate abort.
+
+11:08 We have two ways around this:
+we can simply implement abort as a known symbol in the rts. Which is probably the easier fix.
+or we can fix the relocation, and figure out why our relocation logic is wrong. This is likely going to be more challenging.
+
+11:08 I’ll kick of a build with the first solution over night. And then revise if I feel like going into relocations.
+
+11:11 We’ll also need to figure out what why the macOS builds fail with a recent nixpkgs update; and upstream the linkType detection change to nixpkgs.
+
+
+8:30 AM Alright, so adding abort still makes it fail. Let’s look at this relocation issue first and then look at the more recent failure. Not having to embed abort into ghc’s runtime system would be preferable to me. (In general I don’t link the RtsSymbols solution for it is tedious to work with).
+
+8:31 In case anyone is wondering, this is how my debug session looks like. It’s on a vertical 27" display. The other vertical has Slack, a browser, emacs, ...
+![Screenshot 2021-12-30 at 8.30.17 AM](assets/Screenshot%202021-12-30%20at%208.30.17%20AM.png) 
+
+8:39 AM If we look at the assembly preceding our current crashing position, we find:
+```
+   0x00000000012b3744 <+880>:   mov     w1, #0xff                       // #255
+   0x00000000012b3748 <+884>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b374c <+888>:   adrp    x0, 0x205000
+   0x00000000012b3750 <+892>:   adrp    x2, 0x20f000
+   0x00000000012b3754 <+896>:   adrp    x3, 0x206000
+   0x00000000012b3758 <+900>:   add     x0, x0, #0x53f
+   0x00000000012b375c <+904>:   add     x2, x2, #0x652
+   0x00000000012b3760 <+908>:   add     x3, x3, #0x806
+   0x00000000012b3764 <+912>:   mov     w1, #0xfe                       // #254
+   0x00000000012b3768 <+916>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b376c <+920>:   adrp    x0, 0x205000
+   0x00000000012b3770 <+924>:   adrp    x2, 0x20f000
+   0x00000000012b3774 <+928>:   adrp    x3, 0x20a000
+   0x00000000012b3778 <+932>:   add     x0, x0, #0x53f
+   0x00000000012b377c <+936>:   add     x2, x2, #0x652
+   0x00000000012b3780 <+940>:   add     x3, x3, #0xbcb
+   0x00000000012b3784 <+944>:   mov     w1, #0xfd                       // #253
+   0x00000000012b3788 <+948>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b378c <+952>:   bl      0x1301f7c <abort()>
+=> 0x00000000012b3790 <+956>:   adrp    x0, 0x205000
+```
+Note, that we are really at the `abort()` call, not the next line, but the `$pc` will point to the next instruction to execute.
+
+8:40 Now, where did we come from, this just a bunch of jump targets to call `__assert2` with the expected values. We’d have to have come from `<+920>`. maybe we can locate the the location from which we jumped here.
+
+8:43 looking at the disassembled function we are currently in (`disassemble $pc`), we find the following segment
+```
+   0x00000000012b35d0 <+508>:   mov     w8, #0x8000000                  // #134217728
+   0x00000000012b35d4 <+512>:   add     x8, x2, x8
+   0x00000000012b35d8 <+516>:   lsr     x8, x8, #28
+   0x00000000012b35dc <+520>:   cbz     x8, 0x12b34d4 <relocateObjectCodeAarch64+256>
+   0x00000000012b35e0 <+524>:   b       0x12b37b0 <relocateObjectCodeAarch64+988>
+   0x00000000012b35e4 <+528>:   add     x8, x24, x8
+   0x00000000012b35e8 <+532>:   b       0x12b3648 <relocateObjectCodeAarch64+628>
+   0x00000000012b35ec <+536>:   add     w8, w24, w8
+   0x00000000012b35f0 <+540>:   and     x2, x8, #0xfff
+   0x00000000012b35f4 <+544>:   b       0x12b34d4 <relocateObjectCodeAarch64+256>
+   0x00000000012b35f8 <+548>:   add     x8, x24, x8
+   0x00000000012b35fc <+552>:   b       0x12b3638 <relocateObjectCodeAarch64+612>
+   0x00000000012b3600 <+556>:   add     x8, x24, x8
+   0x00000000012b3604 <+560>:   b       0x12b3634 <relocateObjectCodeAarch64+608>
+   0x00000000012b3608 <+564>:   add     x8, x24, x8
+   0x00000000012b360c <+568>:   b       0x12b362c <relocateObjectCodeAarch64+600>
+   0x00000000012b3610 <+572>:   add     x8, x24, x8
+   0x00000000012b3614 <+576>:   b       0x12b3624 <relocateObjectCodeAarch64+592>
+   0x00000000012b3618 <+580>:   add     x8, x24, x8
+   0x00000000012b361c <+584>:   tst     x8, #0xf
+   0x00000000012b3620 <+588>:   b.ne    0x12b37d0 <relocateObjectCodeAarch64+1020>  // b.any
+   0x00000000012b3624 <+592>:   tst     x8, #0x7
+   0x00000000012b3628 <+596>:   b.ne    0x12b376c <relocateObjectCodeAarch64+920>  // b.any
+   0x00000000012b362c <+600>:   tst     x8, #0x3
+   0x00000000012b3630 <+604>:   b.ne    0x12b374c <relocateObjectCodeAarch64+888>  // b.any
+```
+that looks quite a bit like our case statement (or a fragment there of). We also see the `0x7` value.
+
+8:43 If we are lucky x8 still contains the `S+A` value. `S` is the address we want this location to point to, and `A` is the pre-filled addend from the instruction which we try to patch up.
+
+8:50 AM The `tst` instruction will perform a bitwise and on `x8` and `0x7`, and store the boolean result for us to branch on. Thus `tst` + `b.ne` (branch not equal), checks if `x8 & 0x7`, and if that doesn’t hold, branches to `<+920>`. But $x8 is 240 (`0xf0`), that doesn’t look like what we were hoping for.
+
+8:54 if we look at the assembly for `abort()`, we find that this is where we write `0xf0` into `x8`, so this is not helpful
+```
+   0x0000000001302018 <+156>:   mov     w8, #0xf0                       // #240
+```
+
+8:54 so back to breakpoints. Let’s see a breakpoint on abort, and run again.
+8:56
+I did look at the object code we were given:
+```
+(gdb) p *(ObjectCode*)0xb40000550428a500
+$2 = {status = OBJECT_NEEDED,
+  fileName = 0xb400005504d79aa0 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a", fileSize = 45056, formatName = 0x20c28b "ELF",
+  archiveMemberName = 0xb400005504e46420 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a(syscalls-arm64.o)", symbols = 0xb4000055042a2000, n_symbols = 237,
+  image = 0x3f11000 "\177ELF\002\001\001", info = 0xb400005504d0fae0, imageMapped = 1, misalignment = 0,
+  n_sections = 16, sections = 0xb400005504771080, n_segments = 0, segments = 0x0, next = 0xb40000550428a400,
+  prev = 0xb40000550428a600, next_loaded_object = 0xb40000550428a400, mark = 255, dependencies = 0xb40000550429a800,
+  proddables = 0xb400005504f2a780, symbol_extras = 0x3f1c000, first_symbol_extra = 0, n_symbol_extras = 237,
+  bssBegin = 0x3f1c000 "\250\033\200\322\001", bssEnd = 0x3f1c000 "\250\033\200\322\001", foreign_exports = 0x0,
+  extraInfos = 0x0, rw_m32 = 0xb400005504f18840, rx_m32 = 0xb400005504f18980}
+```
+so we know this is some relocation entry from the `syscalls-arm64.o` from `libc`.
+
+9:00 In a temporary directory, we can extract the archive
+```shell
+$ ar x /nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a
+```
+and then run `readelf -r syscalls-arm64.o`; however, I don’t see LDST relocation entries in there :confused:
+
+11:42 AM I’ve done a bit of assembly annotation for the function in question. It’s quite annoying that we basically merge a bunch of static functions into it. It makes it just harder to read... not because this is necessarily the most productive use of my time, but I’m on holidays and enjoy some assembly analysing from time to time.
+```S
+Dump of assembler code for function relocateObjectCodeAarch64:
+   0x00000000012b33d4 <+0>:     sub     sp, sp, #0x70
+   0x00000000012b33d8 <+4>:     stp     x29, x30, [sp, #16]
+   0x00000000012b33dc <+8>:     stp     x28, x27, [sp, #32]
+   0x00000000012b33e0 <+12>:    stp     x26, x25, [sp, #48]
+   0x00000000012b33e4 <+16>:    stp     x24, x23, [sp, #64]
+   0x00000000012b33e8 <+20>:    stp     x22, x21, [sp, #80]
+   0x00000000012b33ec <+24>:    stp     x20, x19, [sp, #96]
+   0x00000000012b33f0 <+28>:    ldr     x8, [x0, #64]                                            // x0 should be ObjectCode // x8 = x0->info, type: ObjectCodeFormatInfo
+   0x00000000012b33f4 <+32>:    mov     x19, x0                                                  // x19 <- x0 // ObjectCode
+   0x00000000012b33f8 <+36>:    ldr     x9, [x8, #40]                                            // x9 <- x0->info->relTable
+   0x00000000012b33fc <+40>:    cbz     x9, 0x12b346c <relocateObjectCodeAarch64+152>            // x9 == NULL -> <+152>
+   0x00000000012b3400 <+44>:    ldr     x10, [x19, #88]                                          // x10 <- x19->n_sections;
+   0x00000000012b3404 <+48>:    mov     w11, #0x38                      // #56                   // x11 = 56
+   0x00000000012b3408 <+52>:    b       0x12b3414 <relocateObjectCodeAarch64+64>                 // -> <+64>
+   0x00000000012b340c <+56>:    ldr     x9, [x9, #32]                                            // x9 <- x9->next
+   0x00000000012b3410 <+60>:    cbz     x9, 0x12b346c <relocateObjectCodeAarch64+152>            // x9 == NULL -> <+152>
+   0x00000000012b3414 <+64>:    ldr     w12, [x9, #4]                                            // x12 <- x9->targetSectionIndex
+   0x00000000012b3418 <+68>:    nop          
+   0x00000000012b341c <+72>:    madd    x12, x12, x11, x10                                       // x12 <- x12 * x11 + x10
+   0x00000000012b3420 <+76>:    ldr     w12, [x12, #16]                                          // load .kind for the section.
+   0x00000000012b3424 <+80>:    cmp     w12, #0x4                                                // SECTIONKIND_OTHER
+   0x00000000012b3428 <+84>:    b.eq    0x12b340c <relocateObjectCodeAarch64+56>  // b.none      // -> <+56> (continue statement)
+   0x00000000012b342c <+88>:    ldr     x12, [x9, #24]                                           // x9->n_relocations
+   0x00000000012b3430 <+92>:    cbz     x12, 0x12b340c <relocateObjectCodeAarch64+56>            // x12 == 0 -> <+56> -- we don't have any relocations.
+   0x00000000012b3434 <+96>:    ldp     x8, x9, [x9, #8]                                         // (load pair) x8 <- x9->sectionHeader, x9 <- x9->relocations
+   0x00000000012b3438 <+100>:   mov     x0, x19                                                  // x0 <- x19 (ObjectCode)
+   0x00000000012b343c <+104>:   ldr     w1, [x8, #40]                                            // x1 <- x8(sectionHeader)->sh_link
+   0x00000000012b3440 <+108>:   ldr     w2, [x9, #12]                                            // x2 <- x9(relocations)->r_info
+   0x00000000012b3444 <+112>:   bl      0x12b385c <findSymbol>                           
+   0x00000000012b3448 <+116>:   cbnz    x0, 0x12b378c <relocateObjectCodeAarch64+952>            // x0 != NULL -> <+952> (symbol found; but this will be abort(); beause we don't support decoding the addened.
+   0x00000000012b344c <+120>:   adrp    x0, 0x205000                                             // 
+   0x00000000012b3450 <+124>:   adrp    x2, 0x20a000
+   0x00000000012b3454 <+128>:   adrp    x3, 0x204000
+   0x00000000012b3458 <+132>:   add     x0, x0, #0x53f
+   0x00000000012b345c <+136>:   add     x2, x2, #0x571
+   0x00000000012b3460 <+140>:   add     x3, x3, #0xe90
+   0x00000000012b3464 <+144>:   mov     w1, #0x132                      // #306
+   0x00000000012b3468 <+148>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b346c <+152>:   ldr     x23, [x8, #48]                                           // so continue with RelA relocations; x8 is info, so x8->relaTable 
+   0x00000000012b3470 <+156>:   cbz     x23, 0x12b3668 <relocateObjectCodeAarch64+660>           // x23 (ElfRelocationATable) != NULL
+   0x00000000012b3474 <+160>:   adrp    x26, 0x236000                                            // load address relative
+   0x00000000012b3478 <+164>:   mov     w25, #0x18                      // #24
+   0x00000000012b347c <+168>:   add     x26, x26, #0x2a0                                         // add 0x2a0
+   0x00000000012b3480 <+172>:   b       0x12b348c <relocateObjectCodeAarch64+184>
+   0x00000000012b3484 <+176>:   ldr     x23, [x23, #32]                                          // x23 <- x23-> x23 (ElfRelocationATable)->next
+   0x00000000012b3488 <+180>:   cbz     x23, 0x12b3668 <relocateObjectCodeAarch64+660>
+   0x00000000012b348c <+184>:   ldr     x8, [x19, #88]                                           // oc->sections
+   0x00000000012b3490 <+188>:   ldr     w9, [x23, #4]                                            // x23(ElfRelocationATable)->targetSectionIndex
+   0x00000000012b3494 <+192>:   mov     w10, #0x38                      // #56
+   0x00000000012b3498 <+196>:   madd    x20, x9, x10, x8                                         // x20 <- sectionIndex * (sizeof Section = 56) + oc->sections; -- this is the current section.
+   0x00000000012b349c <+200>:   mov     x11, x20                                                 // x11 <- x20
+   0x00000000012b34a0 <+204>:   ldr     w10, [x11, #16]!                                         // x10 <- kind; x11 <- x11+16
+   0x00000000012b34a4 <+208>:   cmp     w10, #0x4                                                // is it SECTIONKIND_OTHER?
+   0x00000000012b34a8 <+212>:   str     x11, [sp]                                                // store $sp in x11
+   0x00000000012b34ac <+216>:   b.eq    0x12b3484 <relocateObjectCodeAarch64+176>  // b.none     // SECTIONKIND_OTHER -> <+176>
+   0x00000000012b34b0 <+220>:   ldr     x10, [x23, #24]                                          // x10 <- x23(ElfRelocationATable)->n_relocations
+   0x00000000012b34b4 <+224>:   cbz     x10, 0x12b3484 <relocateObjectCodeAarch64+176>           // 0 == n_relocations -> <+176>
+   0x00000000012b34b8 <+228>:   mov     w10, #0x38                      // #56                   // store stride in x10
+   0x00000000012b34bc <+232>:   madd    x8, x9, x10, x8                                          // x8 <- section (same we stored in x20); but now x8 doesn't point to `oc` anymore.
+   0x00000000012b34c0 <+236>:   mov     x24, xzr                                                 // x24 <- 0
+   0x00000000012b34c4 <+240>:   add     x28, x8, #0x8                                            // x28 <- x8(Section)->size
+   0x00000000012b34c8 <+244>:   mov     w29, #0x1                       // #1                    // x29 <- 1
+   0x00000000012b34cc <+248>:   b       0x12b34f4 <relocateObjectCodeAarch64+288>                -.
+   0x00000000012b34d0 <+252>:   add     x2, x24, x8                                               |
+   0x00000000012b34d4 <+256>:   mov     x0, x20                                                   |
+   0x00000000012b34d8 <+260>:   mov     x1, x21                                                   |
+   0x00000000012b34dc <+264>:   bl      0x12b30cc <encodeAddendAarch64>                           | 
+   0x00000000012b34e0 <+268>:   ldr     x8, [x23, #24]                                            |
+   0x00000000012b34e4 <+272>:   mov     w24, w29                                                  |
+   0x00000000012b34e8 <+276>:   add     w29, w29, #0x1                                            |
+   0x00000000012b34ec <+280>:   cmp     x8, x24                                                   |
+   0x00000000012b34f0 <+284>:   b.ls    0x12b3484 <relocateObjectCodeAarch64+176>  // b.plast     |
+   0x00000000012b34f4 <+288>:   ldp     x8, x22, [x23, #8]                                      <-' // load pair: x8 <- sectionHeader, x22 <- relocations
+   0x00000000012b34f8 <+292>:   mov     x0, x19                                                  // x0 <- x19 (ObjectCode)
+   0x00000000012b34fc <+296>:   madd    x21, x24, x25, x22                                       // x1 <- x24 * x25 + x22; We start with x24 = 0; and x25 is likely sizeof Elf_Rela
+   0x00000000012b3500 <+300>:   ldr     w1, [x8, #40]                                            // sh_link
+   0x00000000012b3504 <+304>:   ldr     w2, [x21, #12]                                           // rel->r_info
+   0x00000000012b3508 <+308>:   bl      0x12b385c <findSymbol>
+   0x00000000012b350c <+312>:   cbz     x0, 0x12b368c <relocateObjectCodeAarch64+696>      // symbol != NULL 
+   0x00000000012b3510 <+316>:   ldr     x8, [x0, #8]
+   0x00000000012b3514 <+320>:   cbz     x8, 0x12b36ac <relocateObjectCodeAarch64+728>      // symbol->addr != NULL
+   0x00000000012b3518 <+324>:   ldr     x9, [x20]                                                // x9 <- P (section->start + rel->r_offset)
+   0x00000000012b351c <+328>:   cbz     x9, 0x12b36cc <relocateObjectCodeAarch64+760>      // P != NULL
+   0x00000000012b3520 <+332>:   ldr     x10, [x21]                                               // x10 <- rel->r_offset
+   0x00000000012b3524 <+336>:   tbnz    x10, #63, 0x12b36ec <relocateObjectCodeAarch64+792> // section->start <= P
+   0x00000000012b3528 <+340>:   ldr     x4, [x28]
+   0x00000000012b352c <+344>:   add     x27, x9, x10
+   0x00000000012b3530 <+348>:   add     x9, x4, x9
+   0x00000000012b3534 <+352>:   cmp     x9, x27
+   0x00000000012b3538 <+356>:   b.cc    0x12b370c <relocateObjectCodeAarch64+824>  // b.lo, b.ul, b.last // P <= section->start + section_size
+   0x00000000012b353c <+360>:   madd    x10, x24, x25, x22                                       // x10 <- relocation x24 counter, x25 stride.
+   0x00000000012b3540 <+364>:   add     x9, x21, #0x8                                            // x9 <- rel->r_info
+   0x00000000012b3544 <+368>:   ldr     x24, [x10, #16]                                          // x24 <- 
+   0x00000000012b3548 <+372>:   str     x8, [sp, #8]
+   0x00000000012b354c <+376>:   ldr     w9, [x9]
+   0x00000000012b3550 <+380>:   sub     w10, w9, #0x101                                          // R_AARCH64_ABS64 is 0x101, so the minimal value.
+   0x00000000012b3554 <+384>:   cmp     w10, #0x37
+   0x00000000012b3558 <+388>:   b.hi    0x12b378c <relocateObjectCodeAarch64+952>  // b.pmore    // > 0x101+0x37 ; we don't handle any relocations past R_AARCH64_LD64_GOT_LO12_NC
+   0x00000000012b355c <+392>:   ldr     x9, [x0, #16]                                            // so now we can override x9
+   0x00000000012b3560 <+396>:   adr     x11, 0x12b34d0 <relocateObjectCodeAarch64+252>           // 
+   0x00000000012b3564 <+400>:   ldrb    w12, [x26, x10]                                          // use jumptable. ...2a0+(relocation-0x101) -> load byte x12
+   0x00000000012b3568 <+404>:   add     x11, x11, x12, lsl #2                                    // x11 <- x11 (<+252>) + lookuptable << 2
+   0x00000000012b356c <+408>:   br      x11                                                      // jump there.
+
+(gdb) x/40b $x26
+0x2362a0:       0x00    0x00    0x00    0x28    0x28    0x28    0xaf    0xaf
+0x2362a8:       0xaf    0xaf    0xaf    0xaf    0xaf    0xaf    0xaf    0xaf
+0x2362b0:       0xaf    0xaf    0x45    0xaf    0x47    0x4a    0xaf    0xaf
+0x2362b8:       0xaf    0x2b    0x2b    0x4c    0x4e    0x50    0xaf    0xaf
+0x2362c0:       0xaf    0xaf    0xaf    0xaf    0xaf    0xaf    0xaf    0xaf
+
+   0x00000000012b3570 <+412>:   add     x8, x24, x8
+   0x00000000012b3574 <+416>:   sub     x2, x8, x27
+   0x00000000012b3578 <+420>:   b       0x12b34d4 <relocateObjectCodeAarch64+256>
+   0x00000000012b357c <+424>:   add     x8, x24, x8
+   0x00000000012b3580 <+428>:   sub     x2, x8, x27
+   0x00000000012b3584 <+432>:   mov     w8, #0x8000000                  // #134217728
+   0x00000000012b3588 <+436>:   add     x8, x2, x8
+   0x00000000012b358c <+440>:   lsr     x8, x8, #28
+   0x00000000012b3590 <+444>:   cbz     x8, 0x12b34d4 <relocateObjectCodeAarch64+256>
+   0x00000000012b3594 <+448>:   add     x1, sp, #0x8
+   0x00000000012b3598 <+452>:   mov     x0, x20
+   0x00000000012b359c <+456>:   mov     w2, wzr
+   0x00000000012b35a0 <+460>:   bl      0x12b2ec8 <findStub>
+   0x00000000012b35a4 <+464>:   tbz     w0, #0, 0x12b35bc <relocateObjectCodeAarch64+488>
+   0x00000000012b35a8 <+468>:   add     x1, sp, #0x8
+   0x00000000012b35ac <+472>:   mov     x0, x20
+   0x00000000012b35b0 <+476>:   mov     w2, wzr
+   0x00000000012b35b4 <+480>:   bl      0x12b2f14 <makeStub>
+   0x00000000012b35b8 <+484>:   tbnz    w0, #0, 0x12b378c <relocateObjectCodeAarch64+952>
+   0x00000000012b35bc <+488>:   ldr     x8, [sp, #8]
+   0x00000000012b35c0 <+492>:   lsr     x9, x8, #48
+   0x00000000012b35c4 <+496>:   cbnz    x9, 0x12b3790 <relocateObjectCodeAarch64+956>
+   0x00000000012b35c8 <+500>:   sub     x9, x24, x27
+   0x00000000012b35cc <+504>:   add     x2, x8, x9
+   0x00000000012b35d0 <+508>:   mov     w8, #0x8000000                  // #134217728
+   0x00000000012b35d4 <+512>:   add     x8, x2, x8
+   0x00000000012b35d8 <+516>:   lsr     x8, x8, #28
+   0x00000000012b35dc <+520>:   cbz     x8, 0x12b34d4 <relocateObjectCodeAarch64+256>
+   0x00000000012b35e0 <+524>:   b       0x12b37b0 <relocateObjectCodeAarch64+988>
+   0x00000000012b35e4 <+528>:   add     x8, x24, x8
+   0x00000000012b35e8 <+532>:   b       0x12b3648 <relocateObjectCodeAarch64+628>
+   0x00000000012b35ec <+536>:   add     w8, w24, w8
+   0x00000000012b35f0 <+540>:   and     x2, x8, #0xfff
+   0x00000000012b35f4 <+544>:   b       0x12b34d4 <relocateObjectCodeAarch64+256>
+   0x00000000012b35f8 <+548>:   add     x8, x24, x8
+   0x00000000012b35fc <+552>:   b       0x12b3638 <relocateObjectCodeAarch64+612>
+   0x00000000012b3600 <+556>:   add     x8, x24, x8
+   0x00000000012b3604 <+560>:   b       0x12b3634 <relocateObjectCodeAarch64+608>
+   0x00000000012b3608 <+564>:   add     x8, x24, x8
+   0x00000000012b360c <+568>:   b       0x12b362c <relocateObjectCodeAarch64+600>             ---.
+   0x00000000012b3610 <+572>:   add     x8, x24, x8                                              |
+   0x00000000012b3614 <+576>:   b       0x12b3624 <relocateObjectCodeAarch64+592>             -. |
+   0x00000000012b3618 <+580>:   add     x8, x24, x8                                            | |
+   0x00000000012b361c <+584>:   tst     x8, #0xf                                               | |
+   0x00000000012b3620 <+588>:   b.ne    0x12b37d0 <relocateObjectCodeAarch64+1020>  // b.any   | |
+   0x00000000012b3624 <+592>:   tst     x8, #0x7                                             <-' |
+-> 0x00000000012b3628 <+596>:   b.ne    0x12b376c <relocateObjectCodeAarch64+920>  // b.any      |
+   0x00000000012b362c <+600>:   tst     x8, #0x3                                              <--'
+   0x00000000012b3630 <+604>:   b.ne    0x12b374c <relocateObjectCodeAarch64+888>  // b.any
+   0x00000000012b3634 <+608>:   tbnz    w8, #0, 0x12b372c <relocateObjectCodeAarch64+856>
+   0x00000000012b3638 <+612>:   and     x2, x8, #0xfff
+   0x00000000012b363c <+616>:   b       0x12b34d4 <relocateObjectCodeAarch64+256>
+   0x00000000012b3640 <+620>:   cbz     x9, 0x12b37f0 <relocateObjectCodeAarch64+1052>
+   0x00000000012b3644 <+624>:   add     x8, x24, x9
+   0x00000000012b3648 <+628>:   and     x8, x8, #0xfffffffffffff000
+   0x00000000012b364c <+632>:   and     x9, x27, #0xfffffffffffff000
+   0x00000000012b3650 <+636>:   sub     x2, x8, x9
+   0x00000000012b3654 <+640>:   b       0x12b34d4 <relocateObjectCodeAarch64+256>
+   0x00000000012b3658 <+644>:   cbz     x9, 0x12b3814 <relocateObjectCodeAarch64+1088>
+   0x00000000012b365c <+648>:   add     w8, w24, w9
+   0x00000000012b3660 <+652>:   and     x2, x8, #0xfff
+   0x00000000012b3664 <+656>:   b       0x12b34d4 <relocateObjectCodeAarch64+256>
+   0x00000000012b3668 <+660>:   ldp     x20, x19, [sp, #96]
+   0x00000000012b366c <+664>:   ldp     x22, x21, [sp, #80]
+   0x00000000012b3670 <+668>:   ldp     x24, x23, [sp, #64]
+   0x00000000012b3674 <+672>:   ldp     x26, x25, [sp, #48]
+   0x00000000012b3678 <+676>:   ldp     x28, x27, [sp, #32]
+   0x00000000012b367c <+680>:   ldp     x29, x30, [sp, #16]
+   0x00000000012b3680 <+684>:   mov     w0, wzr
+   0x00000000012b3684 <+688>:   add     sp, sp, #0x70
+   0x00000000012b3688 <+692>:   ret
+   0x00000000012b368c <+696>:   adrp    x0, 0x205000
+   0x00000000012b3690 <+700>:   adrp    x2, 0x20a000
+   0x00000000012b3694 <+704>:   adrp    x3, 0x204000
+   0x00000000012b3698 <+708>:   add     x0, x0, #0x53f
+   0x00000000012b369c <+712>:   add     x2, x2, #0x571
+   0x00000000012b36a0 <+716>:   add     x3, x3, #0xe90
+   0x00000000012b36a4 <+720>:   mov     w1, #0x14c                      // #332
+   0x00000000012b36a8 <+724>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b36ac <+728>:   adrp    x0, 0x205000
+   0x00000000012b36b0 <+732>:   adrp    x2, 0x20a000
+   0x00000000012b36b4 <+736>:   adrp    x3, 0x205000
+   0x00000000012b36b8 <+740>:   add     x0, x0, #0x53f
+   0x00000000012b36bc <+744>:   add     x2, x2, #0x571
+   0x00000000012b36c0 <+748>:   add     x3, x3, #0x580
+   0x00000000012b36c4 <+752>:   mov     w1, #0x14d                      // #333
+   0x00000000012b36c8 <+756>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b36cc <+760>:   adrp    x0, 0x205000
+   0x00000000012b36d0 <+764>:   adrp    x2, 0x20f000
+   0x00000000012b36d4 <+768>:   adrp    x3, 0x20f000
+   0x00000000012b36d8 <+772>:   add     x0, x0, #0x53f
+   0x00000000012b36dc <+776>:   add     x2, x2, #0x652
+   0x00000000012b36e0 <+780>:   add     x3, x3, #0x6a4
+   0x00000000012b36e4 <+784>:   mov     w1, #0xbf                       // #191
+   0x00000000012b36e8 <+788>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b36ec <+792>:   adrp    x0, 0x205000
+   0x00000000012b36f0 <+796>:   adrp    x2, 0x20f000
+   0x00000000012b36f4 <+800>:   adrp    x3, 0x20e000
+   0x00000000012b36f8 <+804>:   add     x0, x0, #0x53f
+   0x00000000012b36fc <+808>:   add     x2, x2, #0x652
+   0x00000000012b3700 <+812>:   add     x3, x3, #0x114
+   0x00000000012b3704 <+816>:   mov     w1, #0xc0                       // #192
+   0x00000000012b3708 <+820>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b370c <+824>:   adrp    x0, 0x205000
+   0x00000000012b3710 <+828>:   adrp    x2, 0x20f000
+   0x00000000012b3714 <+832>:   adrp    x3, 0x203000
+   0x00000000012b3718 <+836>:   add     x0, x0, #0x53f
+   0x00000000012b371c <+840>:   add     x2, x2, #0x652
+   0x00000000012b3720 <+844>:   add     x3, x3, #0xcc4
+   0x00000000012b3724 <+848>:   mov     w1, #0xc1                       // #193
+   0x00000000012b3728 <+852>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b372c <+856>:   adrp    x0, 0x205000
+   0x00000000012b3730 <+860>:   adrp    x2, 0x20f000
+   0x00000000012b3734 <+864>:   adrp    x3, 0x203000
+   0x00000000012b3738 <+868>:   add     x0, x0, #0x53f
+   0x00000000012b373c <+872>:   add     x2, x2, #0x652
+   0x00000000012b3740 <+876>:   add     x3, x3, #0xcf2
+   0x00000000012b3744 <+880>:   mov     w1, #0xff                       // #255
+   0x00000000012b3748 <+884>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b374c <+888>:   adrp    x0, 0x205000
+   0x00000000012b3750 <+892>:   adrp    x2, 0x20f000
+   0x00000000012b3754 <+896>:   adrp    x3, 0x206000
+   0x00000000012b3758 <+900>:   add     x0, x0, #0x53f
+   0x00000000012b375c <+904>:   add     x2, x2, #0x652
+   0x00000000012b3760 <+908>:   add     x3, x3, #0x806
+   0x00000000012b3764 <+912>:   mov     w1, #0xfe                       // #254
+   0x00000000012b3768 <+916>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b376c <+920>:   adrp    x0, 0x205000
+   0x00000000012b3770 <+924>:   adrp    x2, 0x20f000
+   0x00000000012b3774 <+928>:   adrp    x3, 0x20a000
+   0x00000000012b3778 <+932>:   add     x0, x0, #0x53f
+   0x00000000012b377c <+936>:   add     x2, x2, #0x652
+   0x00000000012b3780 <+940>:   add     x3, x3, #0xbcb
+   0x00000000012b3784 <+944>:   mov     w1, #0xfd                       // #253
+   0x00000000012b3788 <+948>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b378c <+952>:   bl      0x1301f7c <abort()>
+=> 0x00000000012b3790 <+956>:   adrp    x0, 0x205000
+   0x00000000012b3794 <+960>:   adrp    x2, 0x20f000
+   0x00000000012b3798 <+964>:   adrp    x3, 0x206000
+   0x00000000012b379c <+968>:   add     x0, x0, #0x53f
+   0x00000000012b37a0 <+972>:   add     x2, x2, #0x652
+   0x00000000012b37a4 <+976>:   add     x3, x3, #0x1f9
+   0x00000000012b37a8 <+980>:   mov     w1, #0xf6                       // #246
+   0x00000000012b37ac <+984>:   bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b37b0 <+988>:   adrp    x0, 0x205000
+   0x00000000012b37b4 <+992>:   adrp    x2, 0x20f000
+   0x00000000012b37b8 <+996>:   adrp    x3, 0x20d000
+   0x00000000012b37bc <+1000>:  add     x0, x0, #0x53f
+   0x00000000012b37c0 <+1004>:  add     x2, x2, #0x652
+   0x00000000012b37c4 <+1008>:  add     x3, x3, #0x43d
+   0x00000000012b37c8 <+1012>:  mov     w1, #0xf8                       // #248
+   0x00000000012b37cc <+1016>:  bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b37d0 <+1020>:  adrp    x0, 0x205000
+   0x00000000012b37d4 <+1024>:  adrp    x2, 0x20f000
+   0x00000000012b37d8 <+1028>:  adrp    x3, 0x204000
+   0x00000000012b37dc <+1032>:  add     x0, x0, #0x53f
+   0x00000000012b37e0 <+1036>:  add     x2, x2, #0x652
+   0x00000000012b37e4 <+1040>:  add     x3, x3, #0x899
+   0x00000000012b37e8 <+1044>:  mov     w1, #0xfc                       // #252
+   0x00000000012b37ec <+1048>:  bl      0x130211c <__assert2(char const*, int, char const*, char const*)>
+   0x00000000012b37f0 <+1052>:  ldr     x2, [x19, #32]
+   0x00000000012b37f4 <+1056>:  ldr     x1, [x0]
+   0x00000000012b37f8 <+1060>:  cbnz    x2, 0x12b3800 <relocateObjectCodeAarch64+1068>
+   0x00000000012b37fc <+1064>:  ldr     x2, [x19, #8]
+   0x00000000012b3800 <+1068>:  ldr     x8, [sp]
+   0x00000000012b3804 <+1072>:  adrp    x0, 0x204000
+   0x00000000012b3808 <+1076>:  add     x0, x0, #0xe9e
+   0x00000000012b380c <+1080>:  ldr     w3, [x8]
+   0x00000000012b3810 <+1084>:  bl      0x1295834 <barf>
+   0x00000000012b3814 <+1088>:  ldr     x2, [x19, #32]
+   0x00000000012b3818 <+1092>:  ldr     x1, [x0]
+   0x00000000012b381c <+1096>:  cbnz    x2, 0x12b3824 <relocateObjectCodeAarch64+1104>
+   0x00000000012b3820 <+1100>:  ldr     x2, [x19, #8]
+   0x00000000012b3824 <+1104>:  ldr     x8, [sp]
+   0x00000000012b3828 <+1108>:  adrp    x0, 0x20a000
+   0x00000000012b382c <+1112>:  add     x0, x0, #0xfc0
+   0x00000000012b3830 <+1116>:  ldr     w3, [x8]
+   0x00000000012b3834 <+1120>:  bl      0x1295834 <barf>
+```
+
+11:42 This gives us a bit more clues as to which registers might be of interest.
+
+11:43 We find
+```
+(gdb) p/x *(*(ElfRelocationATable *)$x23)->sectionHeader
+$44 = {sh_name = 0xeb, sh_type = 0x4, sh_flags = 0x0, sh_addr = 0x0, sh_offset = 0x5da8, sh_size = 0x1380,
+  sh_link = 0xf, sh_info = 0x2, sh_addralign = 0x8, sh_entsize = 0x18}
+```
+and can correlate this with the header info we can extract with readelf
+```shell
+$ readelf -S syscalls-arm64.o
+There are 16 section headers, starting at offset 0xa218:
+
+Section Headers:
+  [Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+  [ 0]                   NULL             0000000000000000  00000000
+       0000000000000000  0000000000000000           0     0     0
+  [ 1] .strtab           STRTAB           0000000000000000  000098d0
+       0000000000000942  0000000000000000           0     0     1
+  [ 2] .text             PROGBITS         0000000000000000  00000040
+       00000000000019f8  0000000000000000  AX       0     0     16
+  [ 3] .rela.text        RELA             0000000000000000  00005da8
+       0000000000001380  0000000000000018          15     2     8
+  [ 4] .note.GNU-stack   PROGBITS         0000000000000000  00001a38
+       0000000000000000  0000000000000000           0     0     1
+  [ 5] .note.gnu.pr[...] NOTE             0000000000000000  00001a38
+       0000000000000020  0000000000000000   A       0     0     8
+  [ 6] .eh_frame         PROGBITS         0000000000000000  00001a58
+       0000000000001058  0000000000000000   A       0     0     8
+  [ 7] .rela.eh_frame    RELA             0000000000000000  00007128
+       0000000000001380  0000000000000018          15     6     8
+  [ 8] .debug_info       PROGBITS         0000000000000000  00002ab0
+       000000000000170e  0000000000000000           0     0     1
+  [ 9] .rela.debug_info  RELA             0000000000000000  000084a8
+       00000000000013e0  0000000000000018          15     8     8
+  [10] .debug_abbrev     PROGBITS         0000000000000000  000041be
+       000000000000001f  0000000000000000           0     0     1
+  [11] .debug_aranges    PROGBITS         0000000000000000  000041dd
+       0000000000000030  0000000000000000           0     0     1
+  [12] .rela.debug_[...] RELA             0000000000000000  00009888
+       0000000000000030  0000000000000018          15    11     8
+  [13] .debug_line       PROGBITS         0000000000000000  0000420d
+       000000000000055c  0000000000000000           0     0     1
+  [14] .rela.debug_line  RELA             0000000000000000  000098b8
+       0000000000000018  0000000000000018          15    13     8
+  [15] .symtab           SYMTAB           0000000000000000  00004770
+       0000000000001638  0000000000000018           1    12     8
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+  p (processor specific)
+```
+looks like we are in .rela.eh_frame.
+
+11:47 If we try to find out which relocations are used
+```shell
+$ readelf -r syscalls-arm64.o | awk  '{ print $3 }' |sort|uniq
+
+R_AARCH64_ABS32
+R_AARCH64_ABS64
+R_AARCH64_CONDBR1
+R_AARCH64_PREL32
+'.rela.debug_aranges'
+'.rela.debug_info'
+'.rela.debug_line'
+'.rela.eh_frame'
+'.rela.text'
+Type
+```
+and ignore the irrelevant bits, we see that we have `ABS32`, `ABS64`, `CONDBR1`, and `PREL32`. The relocation logic covers all cases except for `CONDBR1`.
+
+11:51 Here I am being a muppet again. :man-facepalming: , we crash in a direct call to abort, basically in the default branch, not the assert. I got fooled by the assembly. And I’ve been banging my head against
+```
+(gdb) p/x $x10
+$25 = 0x17
+(gdb) p/x $x10+0x101
+$27 = 0x118
+```
+for a while already. Wondering why we’d end up in that assert in the case statement, if the relocation is 0x118, which corresponds to the following in GHC
+```
+ELF_RELOC(R_AARCH64_CONDBR19,                        0x118)
+```
+
+11:51 Well, I guess mystery solved.
+
+11:52 So we’ll need to implement `CONDBR19`.
+
+11:54 [This SO question](https://stackoverflow.com/questions/38570495/aarch64-relocation-prefixes) has a handy table: 
+```
+Operator    | Relocation name | Operation | Inst | Immediate | Check
+------------+-----------------+-----------+------+-----------+----------
+[implicit]  | TSTBR14         | S + A - P | tbz  | X[15:2]   | |X|≤2^15
+            |                 |           | tbnz |           |  
+------------+-----------------+-----------+------+-----------+----------
+[implicit]  | CONDBR19        | S + A - P | b.*  | X[20:2]   | |X|≤2^20
+------------+-----------------+-----------+------+-----------+----------
+[implicit]  | JUMP26          | S + A - P | b    | X[27:2]   | |X|≤2^27
+------------+-----------------+-----------+------+-----------+----------
+[implicit]  | CALL26          | S + A - P | bl   | X[27:2]   | |X|≤2^27
+------------+-----------------+-----------+------+-----------+----------
+```
+So we should be able to implement it fairly similar to our `JUMP26` and `CALL26` relocations, we just need to make sure the range is checked.  
+
+1:18 PM Alright, let’s do this. First we can construct the case fro `CONDBR19` similar to the `JUMP26` in computeAddend, by just ensuring we check the range of X. That is the offset we try to encode has to fit into 20bits.
+
+1:19 We then just add `CONDBR19` to `needStubForRelAarch64`, and `needStubForRelaAarch64`. Why do we need this? We’ve use the same stub logic in `CONDBR19` in `computeAddend` as we did for `JUMP26`, but what are stubs?
+
+1:21 When we relocate branch/jump/call targets, control flow is basically just going forward. But the instruction we encode the target in might not have enough bits to represent the full addressable range. To overcome this, we construct some executable code near to our object we want to relocate. Instead of relocating to the final target, we now relocate to the code near our object. And then encode a jump to the final address in that code.
+
+1:22
+```
+     .---------.
+0xa0 |         | <- a
+     |         |
+     '---------'
+
+     .---------. 
+0xe0 |         | <- b
+0xe8 | a()     |
+     '---------'
+```
+let’s assume we have to items in memory. One is the executable code for function `a` and one for function `b`, where `b` calls `a`. At compile time we don’t know where `a` will reside in memory, so we basically encode a `JUMP <a>`, which the compiler translates to (simplified)  `JUMP 0x0`  and an extra entry that tells us that we need to patch the instruction at `+0x08`, to point to the address where a resides.  
+
+1:25 Now a might be too far away from the location where we want to patch up the instruction such that there is not enough space in the instruction to encode it.
+
+1:30 In this case (for calls — not data lookups), we can do the following:
+```
+     .---------.
+0xa0 |         | <- a
+     |         |    ^
+     '---------'    |
+                    |
+       .------------'
+       |
+0xd0 .-|-------.
+0xd8 | o       |<-----.
+     |---------|      |
+0xe0 |         | <- b |
+0xe8 | a()    -+------'
+     '---------'
+```
+We encode a simple “load address” + “jump” instruction for a at 0xa0 at 0xd8, patch up the instruction at `0xe8` with `-0x10`,  If we now call `a`, the computer jumps to `0xd8`, where it finds instructions to load the address for a and then jump to that address. From the call site this looks indistinguishable.
+
+1:30 So that are stub / jump islands.
+
+1:31 So the only thing that’s left is to patch up the instruction. In `encodeAddendAarch64` we add an entry for `COMPAT_R_AARCH64_CONDBR19`.
+
+1:34 The documentationf rom ARM for this AArch64 B.cond instruction is [here](https://developer.arm.com/documentation/ddi0596/2021-12/Base-Instructions/B-cond--Branch-conditionally-?lang=en)
+
+1:37 The important part is to know the bit layout of the B.cond instruction to properly patch it up:
+```
+// 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16
+//  0  1  0  1  0  1  0  0 [ imm19 ...
+//
+// 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+// ...        imm19               ]  0  [  cond  ]
+```
+
+1:41 For comparison, this is the B ranch instruction:
+```
+// 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16
+//  0  0  0  1  0  1 [ imm26 ...
+//
+// 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+// ...        imm26                              ]
+```
+1:48 PM This should lead us to the following implementation:
+```
+        case COMPAT_R_AARCH64_CONDBR19: { /* relocate b.* ... */
+            // 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16
+            //  0  1  0  1  0  1  0  0 [ imm19 ...
+            //
+            // 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+            // ...        imm19               ]  0  [  cond  ]        
+            assert(isInt64(19+2, addend));
+            *(inst_t *)P = (*(inst_t *)P & 0xff00001f)
+                         | ((uint32_t)(addend << (5-2)) & 0x00ffffe0)
+            break;
+        }  
+```
+we basically want to shift the addend by 5 to the left to leave the lower 5 bits untouched, but we also discard the lower two bits of the addened, as they are always 00.  The ARM page describes this as `bits(64) offset = SignExtend(imm19:'00', 64);`. Note the `:'00'` bit.
+So we shift by 5-2 to the left, and then mask it to fit.
+
+1:56 PM If we look through all the symbols in the `libc`, we find a few more relocations:
+```
+[ok] R_AARCH64_ABS32
+[ok] R_AARCH64_ABS64
+[ok] R_AARCH64_ADD_ABS_LO12_NC
+[ok] R_AARCH64_ADR_GOT_PAGE
+[ok] R_AARCH64_ADR_PREL_PG_HI21
+[ok] R_AARCH64_CALL26
+[**] R_AARCH64_CONDBR19
+[ok] R_AARCH64_JUMP26
+[ok] R_AARCH64_LD64_GOT_LO12_NC
+[ok] R_AARCH64_LDST128_ABS_LO12_NC
+[ok] R_AARCH64_LDST64_ABS_LO12_NC
+[ok] R_AARCH64_LDST32_ABS_LO12_NC
+[ok] R_AARCH64_LDST16_ABS_LO12_NC
+[ok] R_AARCH64_LDST8_ABS_LO12_NC
+[ok] R_AARCH64_PREL32
+[XX] R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21
+[XX] R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC
+```
+the TLSIE relocations seem to only be in address sanitizer objects.
+```
+guarded_pool_allocator.o
+000000000000013c  000000560000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000140  000000560000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000000  000000560000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000004  000000560000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000084  000000560000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000088  000000560000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000018  000000560000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000020  000000560000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000028  000000560000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+000000000000002c  000000560000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000000  000000560000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000004  000000560000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000088  000000560000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+000000000000008c  000000560000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+guarded_pool_allocator_posix.o
+000000000000001c  000000380000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000020  000000380000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+gwp_asan_wrappers.o
+0000000000000010  000000620000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000014  000000620000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000010  000000620000021d R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+0000000000000014  000000620000021e R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC 0000000000000000 _ZZN8gwp_asan15getThreadLocalsEvE6Locals + 0
+```
+:crossed_fingers: that we won’t hit them.
+
+1:59 let’s build a new set of ghcs with that patch.
+
+2:32 PM While we wait for that build to complete, let’s look at the current eval failures: https://ci.zw3rk.com/eval/422#tabs-errors.
+2:33 apparently we fail to build /nix/store/7ylqy380s52syc6vnfmlbywl861yrp5z-haskell-project-plan-to-nix-pkgs.drv, so let’s just try to build that path and see what happens.
+
+2:42 PM after `nix-build`’ing that path, we find
+```
+...
+builder for '/nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv' failed with exit code 134
+```
+
+2:42 alright, let’s see what that did specifically.
+2:42 We are presented with this log:
+```shell
+$ nix-build /nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv
+warning: unknown setting 'experimental-features'
+warning: don't know how to open Nix store 'iohk.cachix.org'
+these derivations will be built:
+  /nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv
+warning: unknown setting 'experimental-features'
+building '/nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv' on 'ssh://builder@20.0.1.31'...
+unpacking sources
+patching sources
+updateAutotoolsGnuConfigScriptsPhase
+configuring
+no configure script, doing nothing
+building
+libredirect.c:102:11: warning: incompatible function pointer types initializing 'int (*)(const char *, int, mode_t)' (aka 'int (*)(const char *, int, unsigned short)') with an expression of type 'int (*)(const char *, int, ...)' [-Wincompatible-function-pointer-types]
+    int (*open_real) (const char *, int, mode_t) = LOOKUP_REAL(open);
+          ^                                        ~~~~~~~~~~~~~~~~~
+libredirect.c:107:27: warning: second argument to 'va_arg' is of promotable type 'mode_t' (aka 'unsigned short'); this va_arg has undefined behavior because arguments will be promoted to 'int' [-Wvarargs]
+        mode = va_arg(ap, mode_t);
+                          ^~~~~~
+/nix/store/q0z24117022srlj2mxlr6npbnmgrnc4g-clang-wrapper-11.1.0/resource-root/include/stdarg.h:19:50: note: expanded from macro 'va_arg'
+#define va_arg(ap, type)    __builtin_va_arg(ap, type)
+                                                 ^~~~
+libredirect.c:134:11: warning: incompatible function pointer types initializing 'int (*)(int, const char *, int, mode_t)' (aka 'int (*)(int, const char *, int, unsigned short)') with an expression of type 'int (*)(int, const char *, int, ...)' [-Wincompatible-function-pointer-types]
+    int (*openat_real) (int, const char *, int, mode_t) = LOOKUP_REAL(openat);
+          ^                                               ~~~~~~~~~~~~~~~~~~~
+libredirect.c:139:27: warning: second argument to 'va_arg' is of promotable type 'mode_t' (aka 'unsigned short'); this va_arg has undefined behavior because arguments will be promoted to 'int' [-Wvarargs]
+        mode = va_arg(ap, mode_t);
+                          ^~~~~~
+/nix/store/q0z24117022srlj2mxlr6npbnmgrnc4g-clang-wrapper-11.1.0/resource-root/include/stdarg.h:19:50: note: expanded from macro 'va_arg'
+#define va_arg(ap, type)    __builtin_va_arg(ap, type)
+                                                 ^~~~
+4 warnings generated.
+installing
+install: creating directory '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0'
+install: creating directory '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib'
+'libredirect.dylib' -> '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib'
+post-installation fixup
+patching script interpreter paths in /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0
+patching script interpreter paths in /nix/store/m2cwdlzrx89yj3isg887a3bqyg5a5ps9-libredirect-0-hook
+running install tests
+dyld: could not load inserted library '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib' because no suitable image found.  Did find:
+        /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib: mach-o, but wrong architecture
+        /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib: stat() failed with errno=1
+
+Assertion failed: (system(TESTPATH) == 0), function test_system, file test.c, line 37.
+/nix/store/sy85akb96r458i21dpk0jyzlyz2fhkk7-stdenv-darwin/setup: line 1355: 43568 Abort trap: 6           NIX_REDIRECTS="/foo/bar/test=/nix/store/5vdrla0lyph05a18c2i47rz5pr21z96a-coreutils-9.0/bin/true" ./test
+builder for '/nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv' failed with exit code 134
+error: build of '/nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv' on 'ssh://builder@20.0.1.31' failed: builder for '/nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv' failed with exit code 134
+builder for '/nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv' failed with exit code 1
+error: build of '/nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv' failed
+```
+2:42 What’s this?
+```
+dyld: could not load inserted library '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib' because no suitable image found.  Did find:
+        /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib: mach-o, but wrong architecture
+        /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib: stat() failed with errno=1
+```
+
+2:43 Again, nix-shell to the rescue.
+
+2:45 (I should mention that I tried to find anything about this on github:nixos/nixpkgs first; the only somewhat related I could find is: https://github.com/NixOS/nixpkgs/issues/141811, but that’s not aarch64-darwin)  
