@@ -1,7 +1,7 @@
 # A Christmas Story
 ## Preface
 
-The following is a story about me, stumbling around ghc, fileformats, libc's, linking and debuggers trying to get the bare minmum of an iOS and Android toolchain to work for compiling Haskell code into libraries to be used on aarch64 mobile devices. You'll see me explain things, make some progress, also make (lots of?) false assumptions, fall into rabbit holes, but hopefully arrive at a happy end.  I've written this in our companies chat system as I went along, and as such you'll find timestamps all over the place. There can be mistakes. I make them all the time!  If you feel like something is unclear, or wrong, please open an issue or even better a pull request.  Merry Christmas and Happy New Year everyone!
+The following is a story about me, stumbling around ghc, fileformats, libc's, linking and debuggers and overcoming challenges and finding bugs, trying to get the bare minmum of an iOS and Android toolchain to work for compiling Haskell code into libraries to be used on aarch64 mobile devices. You'll see me explain things, make some progress, also make (lots of?) false assumptions, fall into rabbit holes, but hopefully arrive at a happy end.  I've written this in our companies chat system as I went along, and as such you'll find timestamps all over the place. There can be mistakes. I make them all the time!  If you feel like something is unclear, or wrong, please open an issue or even better a pull request.  Merry Christmas and Happy New Year everyone!
 
 And now, let's get at it!
 ## Oh Haskell...
