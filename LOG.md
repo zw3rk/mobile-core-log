@@ -2584,7 +2584,7 @@ or we can fix the relocation, and figure out why our relocation logic is wrong. 
    0x00000000012b378c <+952>:   bl      0x1301f7c <abort()>
 => 0x00000000012b3790 <+956>:   adrp    x0, 0x205000
 ```
-Note, that we are really at the `abort()` call, not the next line, but the `$pc` will point to the next instruction to execute.
+Note, that we are really at the `abort()` call, not the next line, but the `$pc` will point to the next instruction to execute. See https://stackoverflow.com/questions/24091566/why-does-the-arm-pc-register-point-to-the-instruction-after-the-next-one-to-be-e for more about `$pc` bias on arm :slightly_smiling_face:
 
 8:40 Now, where did we come from, this just a bunch of jump targets to call `__assert2` with the expected values. We’d have to have come from `<+920>`. maybe we can locate the the location from which we jumped here.
 
@@ -3251,4 +3251,1171 @@ dyld: could not load inserted library '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0
 
 2:43 Again, nix-shell to the rescue.
 
-2:45 (I should mention that I tried to find anything about this on github:nixos/nixpkgs first; the only somewhat related I could find is: https://github.com/NixOS/nixpkgs/issues/141811, but that’s not aarch64-darwin)  
+2:45 (I should mention that I tried to find anything about this on github:nixos/nixpkgs first; the only somewhat related I could find is: https://github.com/NixOS/nixpkgs/issues/141811, but that’s not aarch64-darwin) 
+
+3:08 PM Building that on aarch64-darwin machine ...
+```shell
+$ nix-shell /nix/store/gsmjcp4anyjvfyiwm2w96d97n21xnmmq-libredirect-0.drv
+$ cd $(mktemp -d)
+$ genericBuild
+unpacking sources
+patching sources
+updateAutotoolsGnuConfigScriptsPhase
+configuring
+no configure script, doing nothing
+building
+libredirect.c:102:11: warning: incompatible function pointer types initializing 'int (*)(const char *, int, mode_t)' (aka 'int (*)(const char *, int, unsigned short)') with an expression of type 'int (*)(const char *, int, ...)' [-Wincompatible-function-pointer-types]
+    int (*open_real) (const char *, int, mode_t) = LOOKUP_REAL(open);
+          ^                                        ~~~~~~~~~~~~~~~~~
+libredirect.c:107:27: warning: second argument to 'va_arg' is of promotable type 'mode_t' (aka 'unsigned short'); this va_arg has undefined behavior because arguments will be promoted to 'int' [-Wvarargs]
+        mode = va_arg(ap, mode_t);
+                          ^~~~~~
+/nix/store/q0z24117022srlj2mxlr6npbnmgrnc4g-clang-wrapper-11.1.0/resource-root/include/stdarg.h:19:50: note: expanded from macro 'va_arg'
+#define va_arg(ap, type)    __builtin_va_arg(ap, type)
+                                                 ^~~~
+libredirect.c:134:11: warning: incompatible function pointer types initializing 'int (*)(int, const char *, int, mode_t)' (aka 'int (*)(int, const char *, int, unsigned short)') with an expression of type 'int (*)(int, const char *, int, ...)' [-Wincompatible-function-pointer-types]
+    int (*openat_real) (int, const char *, int, mode_t) = LOOKUP_REAL(openat);
+          ^                                               ~~~~~~~~~~~~~~~~~~~
+libredirect.c:139:27: warning: second argument to 'va_arg' is of promotable type 'mode_t' (aka 'unsigned short'); this va_arg has undefined behavior because arguments will be promoted to 'int' [-Wvarargs]
+        mode = va_arg(ap, mode_t);
+                          ^~~~~~
+/nix/store/q0z24117022srlj2mxlr6npbnmgrnc4g-clang-wrapper-11.1.0/resource-root/include/stdarg.h:19:50: note: expanded from macro 'va_arg'
+#define va_arg(ap, type)    __builtin_va_arg(ap, type)
+                                                 ^~~~
+4 warnings generated.
+installing
+install: cannot remove '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib': Permission denied
+bash: /nix/store/m2cwdlzrx89yj3isg887a3bqyg5a5ps9-libredirect-0-hook/nix-support/setup-hook: Permission denied
+post-installation fixup
+chmod: changing permissions of '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0': Operation not permitted
+chmod: changing permissions of '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib': Operation not permitted
+chmod: changing permissions of '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib': Operation not permitted
+chmod: changing permissions of '/nix/store/m2cwdlzrx89yj3isg887a3bqyg5a5ps9-libredirect-0-hook': Operation not permitted
+chmod: changing permissions of '/nix/store/m2cwdlzrx89yj3isg887a3bqyg5a5ps9-libredirect-0-hook/nix-support': Operation not permitted
+chmod: changing permissions of '/nix/store/m2cwdlzrx89yj3isg887a3bqyg5a5ps9-libredirect-0-hook/nix-support/setup-hook': Operation not permitted
+Patching '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/pkgconfig/*.pc' includedir to output /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0
+sed: can't read /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/pkgconfig/*.pc: No such file or directory
+Patching '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/share/pkgconfig/*.pc' includedir to output /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0
+sed: can't read /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/share/pkgconfig/*.pc: No such file or directory
+patching script interpreter paths in /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0
+patching script interpreter paths in /nix/store/m2cwdlzrx89yj3isg887a3bqyg5a5ps9-libredirect-0-hook
+running install tests
+dyld: could not load inserted library '/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib' because no suitable image found.  Did find:
+	/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib: mach-o, but wrong architecture
+	/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib: stat() failed with errno=1
+
+Assertion failed: (system(TESTPATH) == 0), function test_system, file test.c, line 37.
+
+$ file /nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib
+/nix/store/9bmni99v5ip81n9zv8m2223gc0a8w0dn-libredirect-0/lib/libredirect.dylib: Mach-O 64-bit dynamically linked shared library arm64
+```
+ohh wow :exploding_head:
+
+3:45 PM so this is what we are effectively running...
+```shell
+$ DYLD_INSERT_LIBRARIES=$out/lib/libredirect.dylib NIX_REDIRECTS="/foo/bar/test=/nix/store/5vdrla0lyph05a18c2i47rz5pr21z96a-coreutils-9.0/bin/true" arch -arm64 ./test
+dyld: could not load inserted library '/tmp/tmp.crEKKRPZ3q/out/lib/libredirect.dylib' because no suitable image found.  Did find:
+	/tmp/tmp.crEKKRPZ3q/out/lib/libredirect.dylib: mach-o, but wrong architecture
+	/tmp/tmp.crEKKRPZ3q/out/lib/libredirect.dylib: stat() failed with errno=1
+
+Abort trap: 6
+
+$ arch
+i386
+```
+eh, what? Why is my shell in i386?
+
+4:00 PM so the issue is that the build environment is not native if system is set. Welp.
+
+4:02 a fairly brutal quick fix would be to just disable the `checkPhase` on darwin.
+
+4:03 but maybe we can fix it. Let’s clone nixpkgs on an aarch64-darwin machine.
+
+4:07 Ohh, this is interesting
+```
+$ nix-build nixpkgs --argstr system "x86_64-darwin" -A libredirect
+```
+and
+```
+$ nix-build nixpkgs --argstr system "aarch64-darwin" -A libredirect
+```
+just build. 
+
+4:15 PM Having nixpkgs being a git repo, means we can easily compare our nixpkgs, and the upstream nixpkgs. Now we fixed that linkType issue the other day that forcefully injected dynamic all over the place.
+
+4:16 Looks like that somehow breaks darwin for us now.
+
+4:58 PM Ohh. it built because I got it from hydra for 21.11, and didn’t build it locally. If I `nix-build --check` the same thing it consistently fails.
+
+5:18 PM At this point I’m fairly certain the issue is that an `x86_64` nix install on an `aarch64-darwin` machine, despite the system set to `aarch64-darwin` throws you into an x86_64 shell.
+
+5:24 PM I’ll try an OS update, even though that would be fairly stupid to fix this.
+
+5:46 PM Back to the other build insanity. We now have: https://ci.zw3rk.com/build/427701/nixlog/6
+```
+---> Starting remote-iserv on port 7324
+---| remote-iserv should have started on 7324
+Listening on port 7324
+remote-iserv: Failed to lookup symbol: __loader_add_thread_local_dtor
+remote-iserv: Failed to lookup symbol: __cxa_thread_finalize
+remote-iserv: Failed to lookup symbol: pthread_exit
+remote-iserv: Failed to lookup symbol: _Z13__init_threadP18pthread_internal_t
+remote-iserv: Failed to lookup symbol: __libc_init_main_thread_early
+remote-iserv: Failed to lookup symbol: _Z21__libc_shared_globalsv
+remote-iserv: Failed to lookup symbol: getauxval
+remote-iserv: Failed to lookup symbol: _Z16__libc_init_vdsoP12libc_globals
+remote-iserv: Failed to lookup symbol: __libc_globals
+remote-iserv: Failed to lookup symbol: _Z11LimitEnablePvm
+remote-iserv: Failed to lookup symbol: free
+remote-iserv: Failed to lookup symbol: getcwd
+remote-iserv: Failed to lookup symbol: __memcpy_chk_fail
+remote-iserv: Failed to lookup symbol: __memcpy_chk
+remote-iserv: Failed to lookup symbol: async_safe_fatal_no_abort
+remote-iserv: Failed to lookup symbol: _Znam
+remote-iserv: Failed to lookup symbol: fprintf
+remote-iserv: Failed to lookup symbol: __gmp_allocate_func
+remote-iserv: Failed to lookup symbol: __gmp_tmp_reentrant_alloc
+remote-iserv: Failed to lookup symbol: __gmpn_mul
+remote-iserv: Failed to lookup symbol: integerzmwiredzmin_GHCziIntegerziType_Szh_con_info
+remote-iserv: Failed to lookup symbol: base_GHCziShow_zdwshowSignedInt_info
+remote-iserv: Failed to lookup symbol: base_GHCziChar_chr_closure
+remote-iserv: Failed to lookup symbol: base_GHCziEnum_CZCBounded_con_info
+remote-iserv: Failed to lookup symbol: base_DataziTypeziEquality_zdWHRefl_closure
+remote-iserv: Failed to lookup symbol: base_DataziTypeableziInternal_TrTyCon_con_info
+remote-iserv: Failed to lookup symbol: base_GHCziExceptionziType_divZZeroException_closure
+remote-iserv: Failed to lookup symbol: base_GHCziNatural_minusNatural_closure
+remote-iserv: Failed to lookup symbol: base_GHCziNum_fromInteger_info
+remote-iserv: Failed to lookup symbol: base_GHCziList_any_info
+remote-iserv: Failed to lookup symbol: base_DataziOldList_intercalatezuzdspolyzugo1_info
+remote-iserv: Failed to lookup symbol: base_GHCziException_errorCallException_closure
+remote-iserv: Failed to lookup symbol: base_GHCziErr_errorWithoutStackTrace_closure
+remote-iserv: Failed to lookup symbol: base_DataziEither_Left_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziExceptionziBase_absentError_closure
+remote-iserv: Failed to lookup symbol: base_GHCziBase_eqString_info
+remote-iserv: Failed to lookup symbol: base_DataziTypeziCoercion_Coercion_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziCategory_CZCCategory_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziArrow_arr_info
+remote-iserv: Failed to lookup symbol: base_ControlziApplicative_zdtcWrappedArrow1_closure
+remote-iserv: ^^ Could not load 'base_DataziData_zdfDataChar_closure', dependency unresolved. See top entry above.
+
+<no location info>: error:
+
+ByteCodeLink.lookupCE
+During interactive linking, GHCi couldn't find the following symbol:
+  base_DataziData_zdfDataChar_closure
+This may be due to you not asking GHCi to load extra object files,
+archives or DLLs needed by your current session.  Restart GHCi, specifying
+the missing library using the -L/path/to/object/dir and -lmissinglibname
+flags, or simply by naming the relevant files on the GHCi command line.
+Alternatively, this link failure might indicate a bug in GHCi.
+If you suspect the latter, please report this as a GHC bug:
+  https://www.haskell.org/ghc/reportabug
+
+---> killing remote-iserve...
+```
+fun.
+
+5:46 https://android.googlesource.com/platform/bionic/+/master/libc/bionic/__cxa_thread_atexit_impl.cpp ...
+
+5:47 I wonder if we know in the linker that this is a weak symbol and could just null it if we odn’t have it.
+
+5:48 a quick and dirty fix, is to just define those symbols as null.
+
+5:55 PM we’ll drop into a debug session for this again. It’s easier to see where we came from.
+
+5:59 on our libdirect issue, upgrading the system had no noticable effect.
+
+6:07 PM
+```shell
+$ gdb /nix/store/yjjwp9ykqf0yikwh080dfvpp94x9k009-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv
+GNU gdb (GDB) 10.2
+Copyright (C) 2021 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-unknown-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<https://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+    <http://www.gnu.org/software/gdb/documentation/>.
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from /nix/store/yjjwp9ykqf0yikwh080dfvpp94x9k009-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv...
+(gdb) target remote localhost:1234
+Remote debugging using localhost:1234
+0x0000000000327700 in _start ()
+(gdb) directory ~/result
+Source directories searched: /home/angerman/result:$cdir:$cwd
+(gdb) b rts/Linker.c:928
+Breakpoint 1 at 0x12919a8: rts/Linker.c:928. (2 locations)
+```
+and now we wait. The breakpoint I set is in `loadSymbol` where it returns `NULL` if `ocTryLoad` fails.
+
+10:43 PM (mildly intoxicated, trying to get one more iteration fixed...)
+
+10:46 Even with the __loader_add_thread_local_dtor set to NULL, we now hit __rela_iplt_end, which again is a weak symbol. So the better solution really is to figure out if weak, and if weak accept NULL as valid.
+
+11:37 PM If we look at both object files with the WEAK symbols we are missing, we find:
+```shell
+$ readelf -s --wide libc_init_static.o  |grep WEAK
+    71: 0000000000000000     0 NOTYPE  WEAK   HIDDEN   UND __rela_iplt_end
+    72: 0000000000000000     0 NOTYPE  WEAK   HIDDEN   UND __rela_iplt_start
+```
+and
+```shell
+$ readelf -s __cxa_thread_atexit_impl.o |grep WEAK
+    23: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __loader_add_thr[...]
+    24: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __loader_remove_[...]
+```
+of note, those symbols are `WEAK` and `UNDEFINED`. If we look at how GHC deals with symbols: https://github.com/ghc/ghc/blob/e28dba7ed6cd4a24f738ff009508e7823793c241/rts/linker/Elf.c#L909-L1003, we see that we ignore symbols WEAK + UND symbols outright. They will never get a `symbol->addr` and thus will never be added. That code sure could use some cleanup.
+
+7:32 AM The last build now faild with `pthread_atfork` missing... and is nowhere to be found now in recent bionic_libcs, except for a header... https://android.googlesource.com/platform/bionic.git/+/ea295f68f1fae7c701baaa717f67296659d567ac/libc/arch-common/bionic/pthread_atfork.h alright, one more definition to the list, how I wonder how we should handle this correctly generically, just leave the symbol undefined, and runinto some pre-defined runtime abort?
+It is referenced three times from the libc
+```
+File: /nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a(jemalloc.o)
+   356: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND pthread_atfork
+File: /nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a(guarded_pool_allocator_posix.o)
+    61: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND pthread_atfork
+File: /nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a(libc_init_common.o)
+    75: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND pthread_atfork
+```
+just not defined in any of the objects.
+
+8:42 AM quite frankly this is getting way more ridiculous than I initially expected. I though we’d maybe define 5 missing symbols and call it a day. This bionic `libc` turns out to be a fairly gnarly test case for our bare minimum linker.
+
+9:06 AM :man-facepalming:  of course it’s in the `crtbegin` file...
+```
+readelf -s --wide /nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/crtbegin_static.o
+
+Symbol table '.symtab' contains 38 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+     1: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crtbegin.c
+     2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT    4 $d.2
+     3: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT    5 $d.3
+     4: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT    6 $d.4
+     5: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT    7 $d.5
+     6: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT    8 $d.6
+     7: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT    9 $d.7
+     8: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT    1 $x.1
+     9: 000000000000000c    68 FUNC    LOCAL  DEFAULT    1 _start_main
+    10: 0000000000000000     0 SECTION LOCAL  DEFAULT    1
+    11: 0000000000000000     0 SECTION LOCAL  DEFAULT    3
+    12: 0000000000000000     0 SECTION LOCAL  DEFAULT    4
+    13: 0000000000000000     0 SECTION LOCAL  DEFAULT    5
+    14: 0000000000000000     0 SECTION LOCAL  DEFAULT    6
+    15: 0000000000000000     0 SECTION LOCAL  DEFAULT    7
+    16: 0000000000000000     0 SECTION LOCAL  DEFAULT    9
+    17: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   11 $d.0
+    18: 0000000000000058     0 NOTYPE  LOCAL  DEFAULT   11 ndk_build_number
+    19: 0000000000000018     0 NOTYPE  LOCAL  DEFAULT   11 ndk_version
+    20: 0000000000000000   152 OBJECT  LOCAL  DEFAULT   11 note_android_ident
+    21: 0000000000000014     0 NOTYPE  LOCAL  DEFAULT   11 note_data
+    22: 0000000000000098     0 NOTYPE  LOCAL  DEFAULT   11 note_end
+    23: 000000000000000c     0 NOTYPE  LOCAL  DEFAULT   11 note_name
+    24: 0000000000000000     0 SECTION LOCAL  DEFAULT   11
+    25: 0000000000000000     0 SECTION LOCAL  DEFAULT    8
+    26: 0000000000000000     8 OBJECT  GLOBAL DEFAULT    6 __FINI_ARRAY__
+    27: 0000000000000000     8 OBJECT  GLOBAL DEFAULT    5 __INIT_ARRAY__
+    28: 0000000000000000     8 OBJECT  GLOBAL DEFAULT    4 __PREINIT_ARRAY__
+    29: 0000000000000050    20 FUNC    GLOBAL HIDDEN     1 __atexit_handler_wrapper
+    30: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND __cxa_atexit
+    31: 0000000000000000     8 OBJECT  GLOBAL HIDDEN     7 __dso_handle
+    32: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND __libc_init
+    33: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND __register_atfork
+    34: 0000000000000000    12 FUNC    GLOBAL DEFAULT    1 _start
+    35: 0000000000000064    32 FUNC    GLOBAL HIDDEN     1 atexit
+    36: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND main
+    37: 0000000000000084    16 FUNC    GLOBAL HIDDEN     1 pthread_atfork
+```
+I’m not sure loading `crtbegin` is a good idea. this is really stuff we should just expose from the running process.
+
+9:08 The next tricky thing then becomes, how do we generically detect the names of those files from `$CC`? We could try to run it with -v, and hope to grab it from the linker invocation, by parsing the output against a dummy main.c file. But that seems rather fragile.
+
+10:28 AM After exposing the pthread_atfork symbol from the linked binary to the linker, it keeps on giving...
+```
+unpacking sources
+unpacking source archive /nix/store/plbjz49p51izx7qnkfh1ha6yrjpzr704-mobile-core-root-lib-mobile-core
+source root is mobile-core-root-lib-mobile-core
+patching sources
+updateAutotoolsGnuConfigScriptsPhase
+configuring
+Configure flags:
+--prefix=/nix/store/mgbn2xsjc0f7fpxifmqcz0n3hfyfj0x3-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0 lib:mobile-core --package-db=clear --package-db=/nix/store/1k22p11qxx93l07lg9xwzhvh2kk4fssv-aarch64-unknown-linux-android-mobile-core-lib-mobile-core-0.1.0.0-config/lib/aarch64-unknown-linux-android-ghc-8.10.7/package.conf.d --exact-configuration --dependency=rts=rts --dependency=ghc-heap=ghc-heap-8.10.7 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=integer-gmp=integer-gmp-1.0.3.0 --dependency=base=base-4.14.3.0 --dependency=deepseq=deepseq-1.4.4.0 --dependency=array=array-0.5.4.0 --dependency=ghc-boot-th=ghc-boot-th-8.10.7 --dependency=pretty=pretty-1.1.3.6 --dependency=template-haskell=template-haskell-2.16.0.0 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=Cabal=Cabal-3.2.1.0 --dependency=array=array-0.5.4.0 --dependency=binary=binary-0.8.8.0 --dependency=bytestring=bytestring-0.10.12.0 --dependency=containers=containers-0.6.5.1 --dependency=directory=directory-1.3.6.0 --dependency=filepath=filepath-1.4.2.1 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=ghc-compact=ghc-compact-0.1.0.0 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=hpc=hpc-0.6.1.0 --dependency=mtl=mtl-2.2.2 --dependency=parsec=parsec-3.1.14.0 --dependency=process=process-1.6.13.2 --dependency=text=text-1.2.4.1 --dependency=time=time-1.9.3 --dependency=transformers=transformers-0.5.6.2 --dependency=unix=unix-2.7.2.2 --with-ghc=aarch64-unknown-linux-android-ghc --with-ghc-pkg=aarch64-unknown-linux-android-ghc-pkg --with-hsc2hs=aarch64-unknown-linux-android-hsc2hs --with-gcc=aarch64-unknown-linux-android-cc --with-ld=aarch64-unknown-linux-android-ld --with-ar=aarch64-unknown-linux-android-ar --with-strip=aarch64-unknown-linux-android-strip --disable-executable-stripping --disable-library-stripping --disable-library-profiling --disable-profiling --enable-static --disable-shared --disable-coverage --enable-library-for-ghci --enable-split-sections --hsc2hs-option=--cross-compile --ghc-option=-fPIC --gcc-option=-fPIC --ghc-options=-staticlib
+Configuring library for mobile-core-0.1.0.0..
+Warning: 'hs-source-dirs: app' directory does not exist.
+Warning: 'hs-source-dirs: c-app' directory does not exist.
+Warning: 'include-dirs: stubs' directory does not exist.
+building
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 8955
+---| remote-iserv should have started on 8955
+Listening on port 8955
+rts/linker/elf_reloc_aarch64.c:286: int64_t computeAddend(ObjectCode *, Section *, Elf64_Rel *, ElfSymbol *, int64_t): assertion "0 == ((S+A) & 0x07)" failed
+libc: rts/linker/elf_reloc_aarch64.c:286: int64_t computeAddend(ObjectCode *, Section *, Elf64_Rel *, ElfSymbol *, int64_t): assertion "0 == ((S+A) & 0x07)" failed
+qemu: uncaught target signal 6 (Aborted) - core dumped
+iserv-proxy: {handle: <socket: 6>}: GHCi.Message.remoteCall: end of file
+/nix/store/v7wr1626vz6mj3mw2ahqayksm2cic4mz-iserv-wrapper/bin/iserv-wrapper: line 10:   171 Aborted                 (core dumped) /nix/store/5ca9ws9hj9isc7x5iq542szbzdyvrnyg-qemu-6.1.0/bin/qemu-aarch64 /nix/store/lyy02y017a8a2ylyb22y160q9fadvlig-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv tmp $PORT
+
+<no location info>: error: ghc: ghc-iserv terminated (1)
+
+builder for '/nix/store/6khhjy46l9lcyl1f4l0wrmz8bakc7i2c-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv' failed with exit code 1
+```
+
+10:43 AM At this point throwing this into gdb becomes somewhat routine. 
+
+11:01 AM We’ll find in `gdb`
+```
+(gdb) bt
+#0  abort () at bionic/libc/bionic/abort.cpp:50
+#1  0x0000000001302344 in __assert2 (file=<optimized out>, line=<optimized out>, function=<optimized out>,
+    failed_expression=<optimized out>) at bionic/libc/bionic/assert.cpp:40
+#2  0x00000000012b3964 in computeAddend (oc=0xb400005503d60200, section=0xb400005503dd0118, rel=0x2d46888,
+    symbol=<optimized out>, addend=0) at rts/linker/elf_reloc_aarch64.c:286
+#3  relocateObjectCodeAarch64 (oc=oc@entry=0xb400005503d60200) at rts/linker/elf_reloc_aarch64.c:371
+#4  0x00000000012b3164 in relocateObjectCode (oc=0x0, oc@entry=0xb400005503d60200) at rts/linker/elf_reloc.c:12
+#5  0x00000000012b26ec in ocResolve_ELF (oc=oc@entry=0xb400005503d60200) at rts/linker/Elf.c:1903
+#6  0x0000000001291b78 in ocTryLoad (oc=0xb400005503d60200) at rts/Linker.c:1744
+#7  0x0000000001291a24 in loadSymbol (lbl=0x2b66078 "je_nhbins", pinfo=0xb400005503ccbb20) at rts/Linker.c:926
+#8  lookupDependentSymbol (lbl=0x2b66078 "je_nhbins", dependent=dependent@entry=0xb400005503bb2500)
+    at rts/Linker.c:906
+[...]
+
+(gdb) p *(ObjectCode*)0xb400005503d60200
+$1 = {status = OBJECT_NEEDED, fileName = 0xb400005503c6b1e0 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a", fileSize = 368640, formatName = 0x20c336 "ELF",
+  archiveMemberName = 0xb4000055033e4870 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a(tcache.o)", symbols = 0xb400005503cdf400, n_symbols = 137, image = 0x2d12000 "\177ELF\002\001\001",
+  info = 0xb400005501e35f80, imageMapped = 1, misalignment = 0, n_sections = 68, sections = 0xb400005503dd0000, n_segments = 0, segments = 0x0, next = 0xb400005503d60300, prev = 0xb400005503d60000,
+  next_loaded_object = 0xb400005503d60000, mark = 0, dependencies = 0xb400005503d63800, proddables = 0xb400005503ccbb00, symbol_extras = 0x2d6c000, first_symbol_extra = 0, n_symbol_extras = 137, bssBegin = 0x2d6b080 "",
+  bssEnd = 0x2d6c000 "\377C\a\321\375{\031\251\374", <incomplete sequence \323>, foreign_exports = 0x0, extraInfos = 0x0, rw_m32 = 0xb400005503dcb000, rx_m32 = 0xb400005503dcb140}
+
+(gdb) p rel
+$2 = (Elf64_Rel *) 0x2d46888
+(gdb) p/x *rel
+$3 = {r_offset = 0x58, r_info = 0x710000011e}
+
+(gdb) p *section
+$4 = {start = 0x2d6d000, size = 276, kind = SECTIONKIND_CODE_OR_RODATA, alloc = SECTION_MMAP, mapped_offset = 0, mapped_start = 0x2d6d000, mapped_size = 4096, info = 0xb400005503d56c00}
+```
+11:04
+```shell
+$ readelf -S --wide tcache.o
+...
+  [ 5] .text.je_tcache_event_hard PROGBITS        0000000000000000 000278 000114 00  AX  0   0  4
+...
+```
+(Note: 0x144 = 276)
+
+11:06
+```shell
+$ readelf -r --wide tcache.o
+...
+Relocation section '.rela.text.je_tcache_event_hard' at offset 0x34858 contains 6 entries:
+    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+0000000000000050  000000700000011b R_AARCH64_CALL26       0000000000000000 je_tcache_bin_flush_small + 0
+0000000000000054  0000007100000113 R_AARCH64_ADR_PREL_PG_HI21 0000000000000008 je_tcache_bin_info + 0
+0000000000000058  000000710000011e R_AARCH64_LDST64_ABS_LO12_NC 0000000000000008 je_tcache_bin_info + 0
+00000000000000b8  0000006f0000011b R_AARCH64_CALL26       0000000000000000 je_tcache_bin_flush_large + 0
+00000000000000c0  0000006400000113 R_AARCH64_ADR_PREL_PG_HI21 0000000000000004 je_nhbins + 0
+00000000000000d0  000000640000011d R_AARCH64_LDST32_ABS_LO12_NC 0000000000000004 je_nhbins + 0
+...
+```
+so there is the relocation. And it matches the assertion line
+```c
+        case COMPAT_R_AARCH64_LDST64_ABS_LO12_NC:  assert(0 == ((S+A) & 0x07));
+```
+
+11:06 Alright, I’ll have to contiue with this later; but gdb tells us `A` is `0`. So `S` (symbol address has to somehow one of the last three bits sets. `7 = 0b111`.) 
+
+9:05 PM So I ended up adding another breakpoint, to stop right after the comparison failed.
+```
+(gdb) bt
+#0  computeAddend (oc=0xb400005503d60200, section=0xb400005503dd0118, rel=0x2d46888, symbol=0xb400005503bc1220,
+    addend=0) at rts/linker/elf_reloc_aarch64.c:286
+#1  relocateObjectCodeAarch64 (oc=oc@entry=0xb400005503d60200) at rts/linker/elf_reloc_aarch64.c:371
+#2  0x00000000012b3164 in relocateObjectCode (oc=0xb400005503bc1220, oc@entry=0xb400005503d60200)
+    at rts/linker/elf_reloc.c:12
+...
+```
+and we can inspect rel, symbol, ...
+```
+(gdb) p/x *rel
+$1 = {r_offset = 0x58, r_info = 0x710000011e}
+(gdb) p *symbol
+$2 = {name = 0x2d68b75 "je_tcache_bin_info", addr = 0x2d87004, got_addr = 0x2d88228, elf_sym = 0x2d46570}
+(gdb) p symbol->addr
+$3 = (SymbolAddr *) 0x2d87004
+(gdb) x/x symbol->addr
+0x2d87004:      0x00000000
+(gdb) x/30x symbol->addr
+0x2d87004:      0x00000000      0x00000000      0x00000000      0x00000000
+0x2d87014:      0x00000000      0x00000000      0x00000000      0x00000000
+0x2d87024:      0x00000000      0x00000000      0x00000000      0x00000000
+0x2d87034:      0x00000000      0x00000000      0x00000000      0x00000000
+0x2d87044:      0x00000000      0x00000000      0x00000000      0x00000000
+0x2d87054:      0x00000000      0x00000000      0x00000000      0x00000000
+0x2d87064:      0x00000000      0x00000000      0x00000000      0x00000000
+0x2d87074:      0x00000000      0x00000000
+(gdb) x/2x symbol->got_addr
+0x2d88228:      0x02d87004      0x00000000
+```
+The corresponding source for this crash looks a bit like this:
+```c
+static int64_t
+computeAddend(ObjectCode * oc, Section * section, Elf_Rel * rel,
+              ElfSymbol * symbol, int64_t addend) {
+    [...]
+    addr_t S = (addr_t) symbol->addr;
+    int64_t A = addend;
+    [...]
+    switch(ELF64_R_TYPE(rel->r_info)) {
+        [...]
+        case COMPAT_R_AARCH64_LDST128_ABS_LO12_NC: assert(0 == ((S+A) & 0x0f));
+        case COMPAT_R_AARCH64_LDST64_ABS_LO12_NC:  assert(0 == ((S+A) & 0x07)); // <--
+        case COMPAT_R_AARCH64_LDST32_ABS_LO12_NC:  assert(0 == ((S+A) & 0x03));
+        case COMPAT_R_AARCH64_LDST16_ABS_LO12_NC:  assert(0 == ((S+A) & 0x01));
+        [...]
+    }
+}
+```
+So yes, the address where the symbol points to ends in `0b100`, and that clearly fails in our assert against `0b111`. and it points to a range of zeros. Guess we’ll need to investigate the `je_tcache_bin_info` symbol a bit more.
+
+9:34 PM we find the following for the `je_tcache_bin_info`
+```
+$ readelf --wide -s tcache.o
+Symbol table '.symtab' contains 137 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+   [...]
+   113: 0000000000000008     8 OBJECT  GLOBAL HIDDEN   COM je_tcache_bin_info
+   [...]
+```
+so it’s supposed to be in a common section with size 8 and in principle offset 8. We will need to figure out which section this is and how that section got mappend into memory. Maybe it got mapped at some 4-byte boundary, and thus the offset is 4 instead of 8. 
+
+10:02 PM If we look through the symbols in the tcache.o object code, we find this:
+```
+(gdb) p oc->symbols[8]
+$49 = {name = 0x2d68b75 "je_tcache_bin_info", addr = 0x2d6e000}
+```
+But that seems to be a red herring.
+
+10:02 So let’s look at GHC’s common logic.
+
+10:05 There are two parts to this:
+https://github.com/ghc/ghc/blob/e28dba7ed6cd4a24f738ff009508e7823793c241/rts/linker/Elf.c#L857-L874
+```c
+      unsigned long common_size = 0;
+      unsigned long common_used = 0;
+      for(ElfSymbolTable *symTab = oc->info->symbolTables;
+           symTab != NULL; symTab = symTab->next) {
+           for (size_t j = 0; j < symTab->n_symbols; j++) {
+               ElfSymbol *symbol = &symTab->symbols[j];
+               if (SHN_COMMON == symTab->symbols[j].elf_sym->st_shndx) {
+                   common_size += symbol->elf_sym->st_size;
+               }
+           }
+      }
+      void * common_mem = NULL;
+      if(common_size > 0) {
+          common_mem = mmapAnonForLinker(common_size);
+          if (common_mem == NULL) {
+            barf("ocGetNames_ELF: Failed to allocate memory for SHN_COMMONs");
+          }
+      }
+```
+which iterates over all symbol tables, and collects the COMMON symbols (and aggregates size). If it finds any, it allocates some memory for it. And I doubt we ever free that memory :face_with_rolling_eyes:
+
+The second part is then
+https://github.com/ghc/ghc/blob/e28dba7ed6cd4a24f738ff009508e7823793c241/rts/linker/Elf.c#L909-L923
+```c
+               if (shndx == SHN_COMMON) {
+                   isLocal = false;
+                   ASSERT(common_used < common_size);
+                   ASSERT(common_mem);
+                   symbol->addr = (void*)((uintptr_t)common_mem + common_used);
+                   common_used += symbol->elf_sym->st_size;
+                   ASSERT(common_used <= common_size);
+
+                   IF_DEBUG(linker,
+                            debugBelch("COMMON symbol, size %ld name %s allocated at %p\n",
+                                       symbol->elf_sym->st_size, nm, symbol->addr));
+
+                   /* Pointless to do addProddableBlock() for this area,
+                      since the linker should never poke around in it. */
+               }
+```
+in which we assign the slots in the COMMON section to the symbol’s address. So that we find that address in memory later.
+
+10:07 So if `je_tcache_bin_info` is a common symbol, what does the Value mean?
+
+11:11 PM We’ll then find the following regarding `st_value` entries:
+> **Symbol Values**  
+> Symbol table entries for different object file types have slightly different interpretations for the st_value member.
+> - In relocatable files, st_value holds alignment constraints for a symbol whose section index is SHN_COMMON.
+> - In relocatable files, st_value holds a section offset for a defined symbol. st_value is an offset from the beginning of the section that st_shndx identifies.
+> - In executable and shared object files, st_value holds a virtual address. To make these files’ symbols more useful for the runtime linker, the section offset (file interpretation) gives way to a virtual address (memory interpretation) for which the section number is irrelevant.  
+>
+> Although the symbol table values have similar meanings for different object files, the data allow efficient access by the appropriate programs.
+
+11:12 (from https://docs.oracle.com/cd/E23824_01/html/819-0690/chapter6-79797.html)
+
+11:14 Hence, we should respect the `st_value` value as alignment, but we don’t. Ad the above algorithm is broken into two parts, size computation and allocation, we don’t know ahead of time what actual allocation alignment will be. But we do know that `st_size + st_value` should be enough to deal with any alignment we need. It will overshoot.
+
+11:17 An alternative that might be slightly less in worst cases (lots of common symbols with alignment info), would be to assume some fixed alignment, let’s say 16 or 8 bytes. And then pad what ever memory we get form the system to that value, and pack values aligned from there. 
+
+11:47 PM Let’s see where patching that all up gets us tomorrow morning. 
+
+9:05 AM New year, same fun. After rectifying the alignment issue and thus passing the relocation logic, we are now presented with
+```
+unpacking sources
+unpacking source archive /nix/store/plbjz49p51izx7qnkfh1ha6yrjpzr704-mobile-core-root-lib-mobile-core
+source root is mobile-core-root-lib-mobile-core
+patching sources
+updateAutotoolsGnuConfigScriptsPhase
+configuring
+Configure flags:
+--prefix=/nix/store/gr0fg43kf8x1j8w3vrjv557i4vk9zwkl-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0 lib:mobile-core --package-db=clear --package-db=/nix/store/f1ds1gs34nia9m1cr17wsaj73lvjs5wf-aarch64-unknown-linux-android-mobile-core-lib-mobile-core-0.1.0.0-config/lib/aarch64-unknown-linux-android-ghc-8.10.7/package.conf.d --exact-configuration --dependency=rts=rts --dependency=ghc-heap=ghc-heap-8.10.7 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=integer-gmp=integer-gmp-1.0.3.0 --dependency=base=base-4.14.3.0 --dependency=deepseq=deepseq-1.4.4.0 --dependency=array=array-0.5.4.0 --dependency=ghc-boot-th=ghc-boot-th-8.10.7 --dependency=pretty=pretty-1.1.3.6 --dependency=template-haskell=template-haskell-2.16.0.0 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=Cabal=Cabal-3.2.1.0 --dependency=array=array-0.5.4.0 --dependency=binary=binary-0.8.8.0 --dependency=bytestring=bytestring-0.10.12.0 --dependency=containers=containers-0.6.5.1 --dependency=directory=directory-1.3.6.0 --dependency=filepath=filepath-1.4.2.1 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=ghc-compact=ghc-compact-0.1.0.0 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=hpc=hpc-0.6.1.0 --dependency=mtl=mtl-2.2.2 --dependency=parsec=parsec-3.1.14.0 --dependency=process=process-1.6.13.2 --dependency=text=text-1.2.4.1 --dependency=time=time-1.9.3 --dependency=transformers=transformers-0.5.6.2 --dependency=unix=unix-2.7.2.2 --with-ghc=aarch64-unknown-linux-android-ghc --with-ghc-pkg=aarch64-unknown-linux-android-ghc-pkg --with-hsc2hs=aarch64-unknown-linux-android-hsc2hs --with-gcc=aarch64-unknown-linux-android-cc --with-ld=aarch64-unknown-linux-android-ld --with-ar=aarch64-unknown-linux-android-ar --with-strip=aarch64-unknown-linux-android-strip --disable-executable-stripping --disable-library-stripping --disable-library-profiling --disable-profiling --enable-static --disable-shared --disable-coverage --enable-library-for-ghci --enable-split-sections --hsc2hs-option=--cross-compile --ghc-option=-fPIC --gcc-option=-fPIC --ghc-options=-staticlib
+Configuring library for mobile-core-0.1.0.0..
+Warning: 'hs-source-dirs: app' directory does not exist.
+Warning: 'hs-source-dirs: c-app' directory does not exist.
+Warning: 'include-dirs: stubs' directory does not exist.
+building
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 6127
+---| remote-iserv should have started on 6127
+Listening on port 6127
+Pointer tag for 0x17db000 was truncated, see 'https://source.android.com/devices/tech/debug/tagged-pointers'.
+libc: Pointer tag for 0x17db000 was truncated, see 'https://source.android.com/devices/tech/debug/tagged-pointers'.
+qemu: uncaught target signal 6 (Aborted) - core dumped
+iserv-proxy: <socket: 6>: hGetBufSome: resource vanished (Connection reset by peer)
+/nix/store/6dzynryy11hs3x3srvyz2xs390gyz2l3-iserv-wrapper/bin/iserv-wrapper: line 10:   169 Aborted                 (core dumped) /nix/store/5ca9ws9hj9isc7x5iq542szbzdyvrnyg-qemu-6.1.0/bin/qemu-aarch64 /nix/store/zvc3mjnmyqv2ylrxk16hgmwn9rqismja-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv tmp $PORT
+
+<no location info>: error: ghc: ghc-iserv terminated (1)
+
+builder for '/nix/store/h56i7akhdlflmn32wzwdipbap81w2xyn-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv' failed with exit code 1
+```
+If we follow the linked page, we find that this is a feature of sdk30+, maybe we should just switch to a lower sdk?
+
+9:06 Nah, that wouldn’t be fun, would it? let’s rather try to figure this one out!
+
+9:20 AM We’ll start by launching the run in the debugger again, to try and get some additional information on what’s going on. From the linked website, it sounds like we might be `free`ing some untagged memory. But let’s try to understand this memory tagging thing first. On AArch64, we can have the address mapping ignore the highest byte on a pointer when looking up memory, so we can in principle store arbitary meta information in those bits.
+
+9:26 AM A little while after we started the debugger, we find this output:
+```
+Program received signal SIGABRT, Aborted.
+abort () at bionic/libc/bionic/abort.cpp:50
+50      bionic/libc/bionic/abort.cpp: No such file or directory.
+(gdb) bt
+#0  abort () at bionic/libc/bionic/abort.cpp:50
+#1  0x0000000001334eec in MaybeUntagAndCheckPointer (ptr=<optimized out>)
+    at bionic/libc/bionic/malloc_tagged_pointers.h:102
+#2  free (mem=<optimized out>) at bionic/libc/bionic/malloc_common.cpp:80
+#3  0x00000000012b1acc in ocDeinit_ELF (oc=0xb4000055042a8b00) at rts/linker/Elf.c:329
+#4  0x00000000012b1730 in ocInit_ELF (oc=0xb4000055042a8b00) at rts/linker/Elf.c:175
+#5  0x00000000012b42ec in loadArchive_ (
+    path=0x7ef32ff753b0 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a")
+    at rts/linker/LoadArchive.c:529
+#6  loadArchive (
+    path=0x7ef32ff753b0 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a")
+    at rts/linker/LoadArchive.c:628
+#7  0x0000000000471d2c in cusg_info$def ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+```
+I guess I introduced that bug by trying to be clever and free the memory we allocate for the common sections.
+
+9:28 If we move up a few frames, we can verify this in gdb as well that the address belongs to the commom mem now
+```
+(gdb) up
+#3  0x00000000012b1acc in ocDeinit_ELF (oc=0xb4000055042a8b00) at rts/linker/Elf.c:329
+329
+(gdb) p *oc
+$1 = {status = OBJECT_LOADED,
+  fileName = 0xb400005504d97ce0 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a", fileSize = 25280, formatName = 0x20c336 "ELF",
+  archiveMemberName = 0xb400005504e656c0 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a(bionic.o)", symbols = 0x0, n_symbols = 29818912, image = 0xb40000550504f280 "\177ELF\002\001\001",
+  info = 0x0, imageMapped = 0, misalignment = 0, n_sections = 0, sections = 0x0, n_segments = 0, segments = 0x0,
+  common_mem = 0x1c73000, common_size = 29831187, next = 0x0, prev = 0x0, next_loaded_object = 0x0, mark = 0,
+  dependencies = 0xb400005505057000, proddables = 0x0, symbol_extras = 0x0, first_symbol_extra = 29847616,
+  n_symbol_extras = 29847616, bssBegin = 0x0, bssEnd = 0x0, foreign_exports = 0x0, extraInfos = 0x0,
+  rw_m32 = 0xb400005504f38740, rx_m32 = 0xb400005504f38880}
+```
+
+9:28 The key here is that we didn’t go through the regular allocator, but used mmap to allocate the space, and now use free  to deallocate it. That’ certainly a bug.
+
+9:33 Thos instead of `stgFree(oc->common_mem)`, we’ll now change our strategy, whether or not ghcs runtime system (`rts`), uses `mmap`.
+```c
+#if RTS_LINKER_USE_MMAP
+        munmap(oc->common_mem, oc->common_size);
+#else
+        stgFree(oc->common_mem);
+#endif
+```
+
+1:21 PM And we are back to segfaults. Another `gdb` session waiting for us.
+```
+unpacking sources
+unpacking source archive /nix/store/plbjz49p51izx7qnkfh1ha6yrjpzr704-mobile-core-root-lib-mobile-core
+source root is mobile-core-root-lib-mobile-core
+patching sources
+updateAutotoolsGnuConfigScriptsPhase
+configuring
+Configure flags:
+--prefix=/nix/store/w4bah7b0ff9g8fhnzic0vxm8l6jcmwj3-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0 lib:mobile-core --package-db=clear --package-db=/nix/store/xzqks1f6zr9mhjq082fqcr33qh8xfznz-aarch64-unknown-linux-android-mobile-core-lib-mobile-core-0.1.0.0-config/lib/aarch64-unknown-linux-android-ghc-8.10.7/package.conf.d --exact-configuration --dependency=rts=rts --dependency=ghc-heap=ghc-heap-8.10.7 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=integer-gmp=integer-gmp-1.0.3.0 --dependency=base=base-4.14.3.0 --dependency=deepseq=deepseq-1.4.4.0 --dependency=array=array-0.5.4.0 --dependency=ghc-boot-th=ghc-boot-th-8.10.7 --dependency=pretty=pretty-1.1.3.6 --dependency=template-haskell=template-haskell-2.16.0.0 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=Cabal=Cabal-3.2.1.0 --dependency=array=array-0.5.4.0 --dependency=binary=binary-0.8.8.0 --dependency=bytestring=bytestring-0.10.12.0 --dependency=containers=containers-0.6.5.1 --dependency=directory=directory-1.3.6.0 --dependency=filepath=filepath-1.4.2.1 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=ghc-compact=ghc-compact-0.1.0.0 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=hpc=hpc-0.6.1.0 --dependency=mtl=mtl-2.2.2 --dependency=parsec=parsec-3.1.14.0 --dependency=process=process-1.6.13.2 --dependency=text=text-1.2.4.1 --dependency=time=time-1.9.3 --dependency=transformers=transformers-0.5.6.2 --dependency=unix=unix-2.7.2.2 --with-ghc=aarch64-unknown-linux-android-ghc --with-ghc-pkg=aarch64-unknown-linux-android-ghc-pkg --with-hsc2hs=aarch64-unknown-linux-android-hsc2hs --with-gcc=aarch64-unknown-linux-android-cc --with-ld=aarch64-unknown-linux-android-ld --with-ar=aarch64-unknown-linux-android-ar --with-strip=aarch64-unknown-linux-android-strip --disable-executable-stripping --disable-library-stripping --disable-library-profiling --disable-profiling --enable-static --disable-shared --disable-coverage --enable-library-for-ghci --enable-split-sections --hsc2hs-option=--cross-compile --ghc-option=-fPIC --gcc-option=-fPIC --ghc-options=-staticlib
+Configuring library for mobile-core-0.1.0.0..
+Warning: 'hs-source-dirs: app' directory does not exist.
+Warning: 'hs-source-dirs: c-app' directory does not exist.
+Warning: 'include-dirs: stubs' directory does not exist.
+building
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 9393
+---| remote-iserv should have started on 9393
+Listening on port 9393
+qemu: uncaught target signal 11 (Segmentation fault) - core dumped
+iserv-proxy: {handle: <socket: 7>}: GHCi.Message.remoteCall: end of file
+/nix/store/ys1h1zync1lrwy0fm67l10glk0zjwkn7-iserv-wrapper/bin/iserv-wrapper: line 10:   171 Segmentation fault      (core dumped) /nix/store/5ca9ws9hj9isc7x5iq542szbzdyvrnyg-qemu-6.1.0/bin/qemu-aarch64 /nix/store/y0xgrmmjl6abf2ycwk8xdl630h2wj24r-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7/bin/remote-iserv tmp $PORT
+
+<no location info>: error: ghc: ghc-iserv terminated (1)
+
+builder for '/nix/store/a9ljhsprl4dvnmf58nb590ivpqrgbhgj-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv' failed with exit code 1
+```
+
+1:59 PM While I wait for gdb to stop in the seg fault, I though I’d address something that has been irking me a little. As you may see the iteration on this is fairly slow. Making changes, and then waiting for a full rebuild which easily takes 45-60min.  Doing this during a regular work day would be insane. Iteration speed is just way too slow. The only exception would be if you did this on the side, and basically had another task to focus on; then check this every other hour, fix up a bit, return to your primary task.  If this is our primary task, we’d need to work and make sure we cut down the iterations.  I’m ok with the current cadence, as this allows me to spend some time on this every once in a while, and then go spend time with the kids and family.  But how would we go about this to make iteration faster?
+
+We basically have three components:
+- Our `mobile-core` library for android build (which keeps failing due to the runtime system in GHC).
+- The `remote-iserv` process, which is linked against the (faulty) `rts`.
+- The compiler, which ships the `rts`.
+  
+The thing that takes the most significant time to build is the compiler. So we’d ideally want to not rebuild the compiler each time. (There are other bugs, that might make this necessary as we change e.g. codegen, ...; even then we can shorten the time and don’t need to start from scratch).
+We’ve so far entered a `nix-shell` for the mobile-core library. We can do the same for `remote-iserv`, we can grab the `.drv` from running `nix-store -q --tree` on the mobile-core derivation (`.drv`) file. And we can similarly get the derivation for the compiler. So now we have three nix-shells and just need to make sure we align them properly.
+
+Luckily the compiler effectively is the same (same version, ...) so we don’t need to care about different build plans; and we also really only want to re-link `iserv-remote` (we could even use the old compiler, but link against the rts from the new compiler).
+
+From the `configurePhase` of the `mobile-core` library (and technically any other haskell library built via haskell.nix), we see a
+```
+$(cat /nix/store/...-aarch64-unknown-linux-android-mobile-core-lib-mobile-core-0.1.0.0-config/configure-flags)
+```
+element. This is where haskell.nix stores the package details: package database, and which packages to use at which version.
+As we want to rebuild `remote-iserv`, we’d look for that configure-flags file in the `$configurePhase` of `remote-iserv`’s shell. We then make a local copy of it, and make it writable (similar to what we did with the iserv-wrapper file for debugging purposes). We can then edit that file however we like. If we look into that file we see
+```
+--package-db=clear # this one ensures that ghc doesn't bring any of it's own package databse info
+--package-db=/nix/store/some/path/to/some/package.conf.d
+--exact-configuration
+...
+```
+we want to copy the `package.conf.d` directroy also into a local copy and make it writable.
+In the `package.conf.d` we find a file called `rts.conf`, and in that file there is a line `library-dirs` that among other things points to the location of the built android ghc in the /nix/store. This is the line we want to change and have it point at the `$out` value of our `nix-shell` for the android ghc. (Remember to `mkdir  my-out; export out=$PWD/my-out` — you could also have it point into the ghc tree, but that’s maybe a topic for another day).
+
+With this set up, we can now hack on GHC to our hearts content in the `nix-shell`  (that also means we get the same configuration and patches that we’d see in CI. One useful thing to do is to `git init . && git add . && git commit -m "initial state"` after the `unpackPhase`  and `patchPhase` such that we can simply do `git diff` to get the changes we made to our ghc copy.
+
+Once we have modified GHC to the point we want, we rebuild it (and install it into `$out`). We then switch to the `remote-iserv` shell, in which we have the `configure-flags` pointing to our slightly modified local copy of the package.conf.d, and rebuild `remote-iserv` (this effectively links in a new rts).
+And finally we the mobile-core build phase, with `iserv-wrapper` pointing to the in-place `remote-iserv`.
+
+2:01 Our `gdb` session now looks like this:
+```
+(gdb) target remote localhost:1234
+Remote debugging using localhost:1234
+0x00000000003277c0 in _start ()
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00000000036b8018 in ?? ()
+(gdb) bt
+#0  0x00000000036b8018 in ?? ()
+#1  0x0000000000000010 in ?? ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+```
+that’s unfortunate, we are somewhere in haskell code that failed.
+
+2:01 if we look at the disassembly we find:
+```
+(gdb) disassemble $pc-32,+64
+Dump of assembler code from 0x36b7ff8 to 0x36b8038:
+   0x00000000036b7ff8:  udf     #0
+   0x00000000036b7ffc:  udf     #0
+   0x00000000036b8000:  stp     x29, x30, [sp, #-32]!
+   0x00000000036b8004:  str     x19, [sp, #16]
+   0x00000000036b8008:  mov     x29, sp
+   0x00000000036b800c:  mov     x19, x0
+   0x00000000036b8010:  bl      0x2e48000
+   0x00000000036b8014:  ldr     x8, [x0, #1048]
+=> 0x00000000036b8018:  ldr     x9, [x8]
+   0x00000000036b801c:  cbz     x9, 0x36b8034
+   0x00000000036b8020:  add     x8, x8, #0x10
+   0x00000000036b8024:  cmp     x9, x19
+   0x00000000036b8028:  b.eq    0x36b804c  // b.none
+   0x00000000036b802c:  ldr     x9, [x8], #16
+   0x00000000036b8030:  cbnz    x9, 0x36b8024
+   0x00000000036b8034:  bl      0x2ff4000
+End of assembler dump.
+```
+2:02 so we called a function at `0x2e48000`, and then tried to read some pointer off of the return value + 1048, and that lead us into bad memory.
+
+2:07 We can examine the memory at `0x2e48000` to see what the function did ther:
+```
+(gdb) disassemble 0x2e48000-32,+64
+Dump of assembler code from 0x2e47fe0 to 0x2e48020:
+   0x0000000002e47fe0:  udf     #0
+   0x0000000002e47fe4:  udf     #0
+   0x0000000002e47fe8:  udf     #0
+   0x0000000002e47fec:  udf     #0
+   0x0000000002e47ff0:  udf     #0
+   0x0000000002e47ff4:  udf     #0
+   0x0000000002e47ff8:  udf     #0
+   0x0000000002e47ffc:  udf     #0
+   0x0000000002e48000:  adrp    x0, 0x2e4f000
+   0x0000000002e48004:  add     x0, x0, #0x0
+   0x0000000002e48008:  ret
+   0x0000000002e4800c:  udf     #0
+   0x0000000002e48010:  udf     #0
+   0x0000000002e48014:  udf     #0
+   0x0000000002e48018:  udf     #0
+   0x0000000002e4801c:  udf     #0
+End of assembler dump.
+```
+That looks like a Global Offset Table (GOT) lookup.
+
+2:08 The Global Offset Table (GOT) is similar to the Procedure Linking Table (PLT) we touched on the other day. It’s basically a way to help us link data (as opposed to code) that is out of relocation range.
+
+3:05 PM The rts exports a symbol objects, which holds all object codes we link, so we can use a small gdb script to try and locate the relevant section:
+```
+set $oc = (ObjectCode *)objects
+while($oc)
+set $i = 0
+
+while($i < $oc->n_sections)
+
+if $oc->sections[$i].mapped_start != 0
+if $oc->sections[$i].mapped_start < $addr
+if $oc->sections[$i].mapped_start + $oc->sections[$i].mapped_size > $addr
+p *$oc
+p $oc->sections[$i]
+end
+end
+end
+
+set $i = $i+1
+end
+
+set $oc = $oc->next
+end
+```
+we do
+```
+(gdb) set $addr = 0x36b8018
+(gdb) source /path/to/find-oc-script.gdb
+
+$1 = {status = OBJECT_RESOLVED,
+  fileName = 0xb4000055042789a0 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a", fileSize = 8192, formatName = 0x20c336 "ELF",
+  archiveMemberName = 0xb4000055043985a0 "tmp/nix/store/g3n4xjhcnazz18zi0q57p1q904a3mia7-bionic-prebuilt-ndk-release-r23/lib/libc.a(getauxval.o)", symbols = 0xb400005504235800, n_symbols = 23, image = 0x36b5000 "\177ELF\002\001\001",
+  info = 0xb400005504212760, imageMapped = 1, misalignment = 0, n_sections = 23, sections = 0xb4000055045e9a00,
+  n_segments = 0, segments = 0x0, common_mem = 0x0, common_size = 0, next = 0xb40000550469dd00,
+  prev = 0xb40000550469db00, next_loaded_object = 0xb40000550469db00, mark = 255, dependencies = 0xb400005504718000,
+  proddables = 0xb4000055046c8f20, symbol_extras = 0x36b7000, first_symbol_extra = 0, n_symbol_extras = 23,
+  bssBegin = 0x36b7000 "\375{\276\251\364O\001\251\375\003", bssEnd = 0x36b7000 "\375{\276\251\364O\001\251\375\003",
+  foreign_exports = 0x0, extraInfos = 0x0, rw_m32 = 0xb4000055045f89c0, rx_m32 = 0xb4000055045f8b00}
+$2 = {start = 0x36b8000, size = 92, kind = SECTIONKIND_CODE_OR_RODATA, alloc = SECTION_MMAP, mapped_offset = 0,
+  mapped_start = 0x36b8000, mapped_size = 4096, info = 0xb4000055046e7d40}
+```
+3:09 so we are pretty much at the start of the `getauxval.o`, (I should have printed `$i` as well...) with a section of size `92`.
+
+3:10 `92` is `0x5c`, and with `readelf` we find:
+```shell
+$ readelf -S --wide getauxval.o
+There are 23 section headers, starting at offset 0x1320:
+
+Section Headers:
+  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+  [...]
+  [ 3] .text._Z18__bionic_getauxvalmPb PROGBITS        0000000000000000 000040 00005c 00  AX  0   0  4
+  [...]
+```
+3:13 (due to `$pc` bias, we are looking at `$0x14`), and we find the following relocation entry, which lines up with what we looked at
+```
+Relocation section '.rela.text._Z18__bionic_getauxvalmPb' at offset 0xbd8 contains 1 entry:
+    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+0000000000000014  000000140000011b R_AARCH64_CALL26       0000000000000000 _Z21__libc_shared_globalsv + 0
+```
+
+3:15 that’s not quite right. :thinking_face: that is a relocation for the bl at `0x10`. We segfaulted in `0x14`. Well anyway, this seems to make some sense.
+
+3:38 PM I think we might need to find an alternative solution here. We don’t link crtbeing, and as such never run `libc_init`, and don’t get globals.
+
+3:39 Now we know this is from a call to getauxval. So we could just wire this up into the libc we linked into `remote-iserv`. Not the best, and messing with two duplicate copies of libc is certainly messy.
+
+4:33 PM The code in `getauxval.cpp` is
+```cpp
+// This function needs to be safe to call before TLS is set up, so it can't
+// access errno or the stack protector.
+__LIBC_HIDDEN__ unsigned long __bionic_getauxval(unsigned long type, bool* exists) {
+  for (ElfW(auxv_t)* v = __libc_shared_globals()->auxv; v->a_type != AT_NULL; ++v) {
+    if (v->a_type == type) {
+      *exists = true;
+      return v->a_un.a_val;
+    }
+  }
+  *exists = false;
+  return 0;
+}
+extern "C" unsigned long getauxval(unsigned long type) {
+  bool exists;
+  unsigned long result = __bionic_getauxval(type, &exists);
+  if (!exists) errno = ENOENT;
+  return result;
+}
+```
+there aren’t many calls to `__bionic_getauxval` in the bionic codebase, so this might just be enough bandaid.
+
+4:51 PM It’s not really getting much better :sigh:
+```
+unpacking sources
+unpacking source archive /nix/store/plbjz49p51izx7qnkfh1ha6yrjpzr704-mobile-core-root-lib-mobile-core
+source root is mobile-core-root-lib-mobile-core
+patching sources
+updateAutotoolsGnuConfigScriptsPhase
+configuring
+Configure flags:
+--prefix=/nix/store/m0sq421b43x4znakhhwjrhwglwxvnd71-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0 lib:mobile-core --package-db=clear --package-db=/nix/store/xqckc0kp03ynwml4j7h8a7vgyhqk5zsj-aarch64-unknown-linux-android-mobile-core-lib-mobile-core-0.1.0.0-config/lib/aarch64-unknown-linux-android-ghc-8.10.7/package.conf.d --exact-configuration --dependency=rts=rts --dependency=ghc-heap=ghc-heap-8.10.7 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=integer-gmp=integer-gmp-1.0.3.0 --dependency=base=base-4.14.3.0 --dependency=deepseq=deepseq-1.4.4.0 --dependency=array=array-0.5.4.0 --dependency=ghc-boot-th=ghc-boot-th-8.10.7 --dependency=pretty=pretty-1.1.3.6 --dependency=template-haskell=template-haskell-2.16.0.0 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=Cabal=Cabal-3.2.1.0 --dependency=array=array-0.5.4.0 --dependency=binary=binary-0.8.8.0 --dependency=bytestring=bytestring-0.10.12.0 --dependency=containers=containers-0.6.5.1 --dependency=directory=directory-1.3.6.0 --dependency=filepath=filepath-1.4.2.1 --dependency=ghc-boot=ghc-boot-8.10.7 --dependency=ghc-compact=ghc-compact-0.1.0.0 --dependency=ghc-prim=ghc-prim-0.6.1 --dependency=hpc=hpc-0.6.1.0 --dependency=mtl=mtl-2.2.2 --dependency=parsec=parsec-3.1.14.0 --dependency=process=process-1.6.13.2 --dependency=text=text-1.2.4.1 --dependency=time=time-1.9.3 --dependency=transformers=transformers-0.5.6.2 --dependency=unix=unix-2.7.2.2 --with-ghc=aarch64-unknown-linux-android-ghc --with-ghc-pkg=aarch64-unknown-linux-android-ghc-pkg --with-hsc2hs=aarch64-unknown-linux-android-hsc2hs --with-gcc=aarch64-unknown-linux-android-cc --with-ld=aarch64-unknown-linux-android-ld --with-ar=aarch64-unknown-linux-android-ar --with-strip=aarch64-unknown-linux-android-strip --disable-executable-stripping --disable-library-stripping --disable-library-profiling --disable-profiling --enable-static --disable-shared --disable-coverage --enable-library-for-ghci --enable-split-sections --hsc2hs-option=--cross-compile --ghc-option=-fPIC --gcc-option=-fPIC --ghc-options=-staticlib
+Configuring library for mobile-core-0.1.0.0..
+Warning: 'hs-source-dirs: app' directory does not exist.
+Warning: 'hs-source-dirs: c-app' directory does not exist.
+Warning: 'include-dirs: stubs' directory does not exist.
+building
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 7658
+---| remote-iserv should have started on 7658
+Listening on port 7658
+remote-iserv: Failed to lookup symbol: _ZZN8gwp_asan15getThreadLocalsEvE6Locals
+remote-iserv: Failed to lookup symbol: _ZN8gwp_asan20GuardedPoolAllocator13installAtForkEv
+remote-iserv: Failed to lookup symbol: _ZN8gwp_asan20GuardedPoolAllocator10deallocateEPv
+remote-iserv: Failed to lookup symbol: _Z16MaybeInitGwpAsanP12libc_globalsb
+remote-iserv: Failed to lookup symbol: free
+remote-iserv: Failed to lookup symbol: getcwd
+remote-iserv: Failed to lookup symbol: __memcpy_chk_fail
+remote-iserv: Failed to lookup symbol: __memcpy_chk
+remote-iserv: Failed to lookup symbol: async_safe_fatal_no_abort
+remote-iserv: Failed to lookup symbol: _Znam
+remote-iserv: Failed to lookup symbol: fprintf
+remote-iserv: Failed to lookup symbol: __gmp_allocate_func
+remote-iserv: Failed to lookup symbol: __gmp_tmp_reentrant_alloc
+remote-iserv: Failed to lookup symbol: __gmpn_mul
+remote-iserv: Failed to lookup symbol: integerzmwiredzmin_GHCziIntegerziType_Szh_con_info
+remote-iserv: Failed to lookup symbol: base_GHCziShow_zdwshowSignedInt_info
+remote-iserv: Failed to lookup symbol: base_GHCziChar_chr_closure
+remote-iserv: Failed to lookup symbol: base_GHCziEnum_CZCBounded_con_info
+remote-iserv: Failed to lookup symbol: base_DataziTypeziEquality_zdWHRefl_closure
+remote-iserv: Failed to lookup symbol: base_DataziTypeableziInternal_TrTyCon_con_info
+remote-iserv: Failed to lookup symbol: base_GHCziExceptionziType_divZZeroException_closure
+remote-iserv: Failed to lookup symbol: base_GHCziNatural_minusNatural_closure
+remote-iserv: Failed to lookup symbol: base_GHCziNum_fromInteger_info
+remote-iserv: Failed to lookup symbol: base_GHCziList_any_info
+remote-iserv: Failed to lookup symbol: base_DataziOldList_intercalatezuzdspolyzugo1_info
+remote-iserv: Failed to lookup symbol: base_GHCziException_errorCallException_closure
+remote-iserv: Failed to lookup symbol: base_GHCziErr_errorWithoutStackTrace_closure
+remote-iserv: Failed to lookup symbol: base_DataziEither_Left_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziExceptionziBase_absentError_closure
+remote-iserv: Failed to lookup symbol: base_GHCziBase_eqString_info
+remote-iserv: Failed to lookup symbol: base_DataziTypeziCoercion_Coercion_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziCategory_CZCCategory_con_info
+remote-iserv: Failed to lookup symbol: base_ControlziArrow_arr_info
+remote-iserv: Failed to lookup symbol: base_ControlziApplicative_zdtcWrappedArrow1_closure
+remote-iserv: ^^ Could not load 'base_DataziData_zdfDataChar_closure', dependency unresolved. See top entry above.
+
+<no location info>: error:
+
+ByteCodeLink.lookupCE
+During interactive linking, GHCi couldn't find the following symbol:
+  base_DataziData_zdfDataChar_closure
+This may be due to you not asking GHCi to load extra object files,
+archives or DLLs needed by your current session.  Restart GHCi, specifying
+the missing library using the -L/path/to/object/dir and -lmissinglibname
+flags, or simply by naming the relevant files on the GHCi command line.
+Alternatively, this link failure might indicate a bug in GHCi.
+If you suspect the latter, please report this as a GHC bug:
+  https://www.haskell.org/ghc/reportabug
+
+---> killing remote-iserve...
+builder for '/nix/store/gmvhnfhrihfp4j6srrfa2mjq3l2nivsa-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv' 
+```
+alright, I guess we’ll keep adding symbols. I don’t really feel like going down the address sanatizer missing symbols route. 
+
+4:53 `free` or `fprintf`, If we bridge free might should also bridge the whole suite of `malloc`/`calloc`/... so maybe `fprintf` is a better choice.
+
+5:00 PM and yes, figuring out the right balance, which symbols to bridge (from the `libc` linked into `remote-iserv` or `ghc` for stage2 compiler and when not using `-fexternal-interpreter`), I find to be tricky.
+
+8:18 PM I’m getting a bit frustrated by the progress we are making. Sure we fix a bunch of annoying bugs in ghc’s linker, but I think I’ll need to spend some focus time on this. So let’s see if how far I can get over the next four hours. Hopefully with minimal interruption, and a :tumbler_glass:. The latter one not necessarily being helpful :wink:
+
+9:48 PM Now that we bridge symbols into the libc we link against remote-iserv, the linker complains upon encountering fprintf and friends. So we need to ad some special handling for this. I’ve set up the faster iteration method as described above. One element I forgot to mention is that you need to run
+```shell
+$ aarch64-unknown-linux-android-ghc-pkg recache --package-db $PWD/package.conf.d
+```
+after the `rts.conf` in the `package.conf.d` was modified. Otherwise ghc will keep reading the cached value.
+Also another nice thing that setup can do is allow -debug, that is re-link the remote-iserv against the debug runtime.
+
+9:49 This setup now constrains our iteration speed by how fast we can run the build phase in the library component we try to build. The linker (run through `qemu`) is fairly slow. And thus each iteration takes ~5min.  Rebuilding the rts (running make `-j` in the ghc source folder) takes a few seconds, relinking `remote-iserv` takes also only a few seconds.
+
+9:50 looks like we do need to bridge free :confused:
+```
+remote-iserv: Failed to lookup symbol: _ZZN8gwp_asan15getThreadLocalsEvE6Locals
+remote-iserv: Failed to lookup symbol: _ZN8gwp_asan20GuardedPoolAllocator13installAtForkEv
+remote-iserv: Failed to lookup symbol: _ZN8gwp_asan20GuardedPoolAllocator10deallocateEPv
+remote-iserv: Failed to lookup symbol: _Z16MaybeInitGwpAsanP12libc_globalsb
+remote-iserv: Failed to lookup symbol: free 
+...
+```
+I think this is safe in this case as we are linking the same `libc` as we are loading, but this is certainly not the generic case.
+
+10:08 PM So why didn’t we find `getThreadLocals`? well, ... let’s look with readelf where it’s referenced:
+```
+$ readelf -s --wide guarded_pool_allocator_posix.o
+Symbol table '.symtab' contains 64 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+   [...]
+    56: 0000000000000000     8 TLS     WEAK   DEFAULT   27 _ZZN8gwp_asan15getThreadLocalsEvE6Locals
+   [...]
+```
+so it’s some `ST_TYPE` of `TLS`? Hmm let’s see what we can find. For some reason oracle comes up again first.
+https://docs.oracle.com/cd/E23824_01/html/819-0690/chapter8-5.html
+
+And yes, GHC has absolutely no support for Thread Local Storage.
+
+10:29 PM Ahh, a slightly more fun error now:
+```
+remote-iserv: Failed to lookup symbol: locale_charset
+remote-iserv: Failed to lookup symbol: __hscore_get_errno
+remote-iserv: Failed to lookup symbol: base_GHCziIOziEncodingziIconv_iconvEncoding2_closure
+```
+and yes, we failed to load iconv.
+
+10:35 PM so `base` (at least on android) would need to depend on `iconv` for this to work.
+
+10:37 However ... we can force it... like so:
+```
+$SETUP_HS build lib:mobile-core -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-fexternal-interpreter --ghc-option=-pgmi --ghc-option=$PWD/iserv-wrapper  --ghc-option=-L/nix/store/yr2kfhax4nwc66ixznvmy1vc8dqnlimj-gmp-6.2.1-aarch64-unknown-linux-android/lib --ghc-option=-fPIC --gcc-option=-fPIC --ghc-option=-L/nix/store/418598gnf1mncf2y4i9hi8w7vzx87bs9-libiconv-aarch64-unknown-linux-android-1.16/lib --ghc-option=-liconv
+```
+and ...
+```shell
+$SETUP_HS build lib:mobile-core -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-fexternal-interpreter --ghc-option=-pgmi --ghc-option=$PWD/iserv-wrapper  --ghc-option=-L/nix/store/yr2kfhax4nwc66ixznvmy1vc8dqnlimj-gmp-6.2.1-aarch64-unknown-linux-android/lib --ghc-option=-fPIC --gcc-option=-fPIC --ghc-option=-L/nix/store/418598gnf1mncf2y4i9hi8w7vzx87bs9-libiconv-aarch64-unknown-linux-android-1.16/lib --ghc-option=-liconv
+Preprocessing library for mobile-core-0.1.0.0..
+Building library for mobile-core-0.1.0.0..
+[1 of 1] Compiling Lib              ( lib/Lib.hs, dist/build/Lib.o )
+---> Starting remote-iserv on port 8259
+---| remote-iserv should have started on 8259
+[        remote-iserv] Opening socket
+Listening on port 8259
+[        remote-iserv] Starting serv
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: MallocStrings ["This will trigger Template Haskell. Hooray!"]
+[        remote-iserv] writing pipe: [RemotePtr 12970367291930780032]
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: InitLinker
+...
+[        remote-iserv] msg: LoadArchive "tmp/nix/store/418598gnf1mncf2y4i9hi8w7vzx87bs9-libiconv-aarch64-unknown-linux-android-1.16/lib/libiconv.a"
+[        remote-iserv] writing pipe: ()
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: ResolveObjs
+[        remote-iserv] writing pipe: True
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: RemoveLibrarySearchPath (RemotePtr 0)
+[        remote-iserv] writing pipe: False
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: RemoveLibrarySearchPath (RemotePtr 0)
+[        remote-iserv] writing pipe: False
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: RemoveLibrarySearchPath (RemotePtr 0)
+[        remote-iserv] writing pipe: False
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: ResolveObjs
+[        remote-iserv] writing pipe: True
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LookupSymbol "ghczmprim_GHCziCString_unpackCStringzh_closure"
+[        remote-iserv] writing pipe: Just (RemotePtr 25010184)
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LookupSymbol "base_DataziData_zdfDataChar_closure"
+[        remote-iserv] writing pipe: Just (RemotePtr 94827920)
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LookupSymbol "base_DataziData_zdfDataZMZN_closure"
+[        remote-iserv] writing pipe: Just (RemotePtr 94887712)
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: LookupSymbol "base_GHCziDesugar_toAnnotationWrapper_closure"
+[        remote-iserv] writing pipe: Just (RemotePtr 104882184)
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: CreateBCOs ["\NUL\NUL\...\NUL\NUL\SOH}\160\b"]
+[        remote-iserv] writing pipe: [RemoteRef (RemotePtr 24)]
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: StartTH
+[        remote-iserv] writing pipe: RemoteRef (RemotePtr 25)
+[        remote-iserv] reading pipe...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: RunTH (RemoteRef (RemotePtr 25)) (RemoteRef (RemotePtr 24)) THAnnWrapper (Just (Loc {loc_filename = "lib/Lib.hs", loc_package = "mobile-core-0.1.0.0-HfUuggbqw4DC9ci8Blc8Tf", loc_module = "Lib", loc_start = (14,1), loc_end = (14,65)}))
+[        remote-iserv] wrapRunTH...
+[        remote-iserv] wrapRunTH done.
+[        remote-iserv] writing RunTHDone.
+[        remote-iserv] QDone
+[        remote-iserv] writing pipe: QDone "\STX\SOH\NUL\NUL...\NUL\NUL\NUL\NUL"
+[        remote-iserv] reading pipe...
+Linking liba.a ...
+[        remote-iserv] discardCtrlC
+[        remote-iserv] msg: Shutdown
+[        remote-iserv] serv ended
+[        remote-iserv] Opening socket
+---> killing remote-iserve...
+```
+10:37 :tada:
+
+11:28 AM Short discussion on how to set up the quick iteration environment with nix, because I believe I might only have outlined the idea, but there can still be pitfalls along the way.
+
+11:32 We saw that `/nix/store/gmvhnfhrihfp4j6srrfa2mjq3l2nivsa-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv` was failing. That is the derivation that builds the `mobile-core` library. It in turn calls remote-iserv, which is built by `ghc` (as is the `mobile-core` haskell package.
+```shell
+$ nix-store -q --tree /nix/store/gmvhnfhrihfp4j6srrfa2mjq3l2nivsa-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv \
+  | egrep "remote-iserv-exe|android-ghc" \
+  | egrep -v "configured-src|config|env" \
+  | grep -v "\[...\]"
+warning: unknown setting 'experimental-features'
+|   +---/nix/store/j2cyh1mf1f8y51ybzkx2aaid8ncik5dm-aarch64-unknown-linux-android-ghc-8.10.7.drv
+|   +---/nix/store/m389c3h4igpa26m5lhqj6rdb65a56jsk-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7.drv
+```
+if we query (`-q`) the `nix-store`, and as for the dependency tree (`--tree`) of the derivation that fails, we get all dependencies. We are only interested in the `remote-iserv-exe` and `android-ghc`, but nothing that’s basically auxiliary derivations, so we ignore `configured-src`, `config` and `env`, we also ignore repated derivations that have `[...]` at the end. 
+
+11:36 We need three terminals, I usually use `tmux` with multiple panes for this. In this case I have four panes:
+- GHC
+- remote-iserv
+- mobile-core library
+- gdb
+
+11:49 AM We start with GHC. Let’s see what outputs it produces.
+```shell
+$ nix show-derivation /nix/store/j2cyh1mf1f8y51ybzkx2aaid8ncik5dm-aarch64-unknown-linux-android-ghc-8.10.7.drv
+contains
+{
+  "/nix/store/j2cyh1mf1f8y51ybzkx2aaid8ncik5dm-aarch64-unknown-linux-android-ghc-8.10.7.drv": {
+    "outputs": {
+      "doc": {
+        "path": "/nix/store/9aj7kpcn7h37b6jhgx566da8k3diqcp2-aarch64-unknown-linux-android-ghc-8.10.7-doc"
+      },
+      "generated": {
+        "path": "/nix/store/ifwip82yf40yf51i39bbp3xfqs0d6swk-aarch64-unknown-linux-android-ghc-8.10.7-generated"
+      },
+      "out": {
+        "path": "/nix/store/np0xa33ppg02mc7mxjdjmdngwmvbazp6-aarch64-unknown-linux-android-ghc-8.10.7"
+      }
+    },
+...
+}
+```
+we won’t be able to write to those store paths from within our `nix-shell`, so we will need to redirect that output.
+```shell
+$ nix-shell --pure /nix/store/j2cyh1mf1f8y51ybzkx2aaid8ncik5dm-aarch64-unknown-linux-android-ghc-8.10.7.drv
+# change into a temporary directory
+[nix-shell] $ cd $(mktemp -d)
+# create the out paths, and export them
+[nix-shell] $ mkdir doc && export doc=$PWD/doc
+[nix-shell] $ mkdir generated && export generated=$PWD/generated
+[nix-shell] $ mkdir out && export out=$PWD/out
+# with that set, we can just run `genericBuild` and wait until it's done.
+[nix-shell] $ genericBuild
+```
+while GHC is building, we can start setting up remote-iserv’s shell:
+```shell
+$ nix-shell --pure /nix/store/m389c3h4igpa26m5lhqj6rdb65a56jsk-remote-iserv-exe-remote-iserv-aarch64-unknown-linux-android-8.10.7.drv
+[nix-shell] $ cd $(mktemp -d)
+# this one only has one output $out.
+[nix-shell] $ mkdir out && export out=$PWD/out
+[nix-shell] $ genericBuild
+```
+this won’t take long.
+
+From the output, we can see the Configure flags: line, and the subsequent line with all the arguments passed to $SETUP_HS configure. That line tells us that the package database that was used was at `--package-db=/nix/store/5si15v45sjr6ipihk04wg64x05dnrfca-aarch64-unknown-linux-android-remote-iserv-exe-remote-iserv-8.10.7-config/lib/aarch64-unknown-linux-android-ghc-8.10.7/package.conf.d`. So we create a local copy of that package.db
+```shell
+[nix-shell] $ cp -r /nix/store/5si15v45sjr6ipihk04wg64x05dnrfca-aarch64-unknown-linux-android-remote-iserv-exe-remote-iserv-8.10.7-config/lib/aarch64-unknown-linux-android-ghc-8.10.7/package.conf.d .
+# and make it writable
+[nix-shell] $ chmod +rw -R package.conf.d
+```
+Next we need to modify the package configuration for the `rts` 
+
+11:49 We edit `package.conf.d/rts.conf`
+
+11:52 In the `library-dirs` section we replace the first entry with `<tmp/path>/aarch64-unknown-linux-android-ghc-8.10.7-configured-src/rts/dist/build`, where `<tmp/path>` is the patch we build ghc in the other terminal in. In `rts/dist/build` we should (after ghc’s build is done) find the various `libHSrts*.a` files among other objects. 
+
+11:56 We need to update the package database cache to reflect the change we made:
+```shell
+[nix-shell] aarch64-unknown-linux-android-ghc-pkg recache --package-db $PWD/package.conf.d
+```
+and need to reconfigure (use the same configure flags as before, but change the `--package-db` value):
+```shell
+[nix-shell] $ $SETUP_HS configure ... --package-db=clear --package-db=$PWD/package.conf.d --exact-configuration ... 
+```
+
+11:58 From `echo "$buildPhase"` we then grab `$SETUP_HS build exe:remote-iserv -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-optl-static`, and run it.
+Now we should have a `remote-iserv` binary in `./dist/build/remote-iserv/remote-iserv`.  And we can re-build/re-link that binary with the rts from our ghc build, by re-running the `$SETUP_HS` build command.
+
+12:01 On to the mobile-core configuration.
+
+```shell
+$ nix-shell /nix/store/gmvhnfhrihfp4j6srrfa2mjq3l2nivsa-mobile-core-lib-mobile-core-aarch64-unknown-linux-android-0.1.0.0.drv
+[nix-shell] $ generiBuild
+# we won't use `genericBuild`, as that will ultimately fail and throw us out of the shell
+[nix-shell] $ unpackPahse
+[nix-shell] $ cd mobile-core-root-lib-mobile-core
+# we don't have patches, so this will be a no-op here, but sometimes we have patches...
+[nix-shell] $ patchPhase
+```
+Next we run the `$SETUP_HS configure ... command we grab from echo "$configurePhase"`.
+And then we look at `echo "$buildPhase"`. 
+
+12:04 We do want to replace the path to the `remote-iserv` in the `iserv-wrapper`.
+```shell
+[nix-shell] $ cp /nix/store/i853gm1ms53mg1318b2rgdmv7sn1c9ck-iserv-wrapper/bin/iserv-wrapper .
+[nix-shell] $ chmod +w iserv-wrapper
+```
+and then we edit the path to the remote-iserv in the `iserv-wrapper` to point to `<tmp/path>/dist/build/remote-iserv/remote-iserv`, where `<tmp/path>` is the path to our `remote-iserv` temporary path.
+
+12:05 Finally all that’s left is to invoke the `$SETUP_HS` build command with a modified iserv-wrapper path like so:
+```
+[nix-shell] $ $SETUP_HS build lib:mobile-core -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-fexternal-interpreter --ghc-option=-pgmi --ghc-option=$PWD/iserv-wrapper --ghc-option=-L/nix/store/yr2kfhax4nwc66ixznvmy1vc8dqnlimj-gmp-6.2.1-aarch64-unknown-linux-android/lib --ghc-option=-fPIC --gcc-option=-fPIC
+```
+12:08 To test changes we made to GHC (e.g. use `$favoriteEditor` and open the `<tmp/path>/aarch64-unknown-linux-android-ghc-8.10.7-configured-src` to hack at your hearts content), first we create a git snapshot of the built tree, so we can trivially git diff our patch later:
+```
+[nix-shell] $ git init .
+[nix-shell] $ git add .
+[nix-shell] $ git commit -a -m "initial state"
+```
+in our first terminal with the ghc sources. Then, we run
+```
+[nix-shell] $ make -j
+```
+followed by
+```shell
+[nix-shell] $ $SETUP_HS build exe:remote-iserv -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-optl-static
+```
+in the second terminal with our remote-iserv sources, and finally
+```shell
+[nix-shell] $ $SETUP_HS build lib:mobile-core -j$(($NIX_BUILD_CORES > 4 ? 4 : $NIX_BUILD_CORES)) --ghc-option=-fexternal-interpreter --ghc-option=-pgmi --ghc-option=$PWD/iserv-wrapper --ghc-option=-L/nix/store/yr2kfhax4nwc66ixznvmy1vc8dqnlimj-gmp-6.2.1-aarch64-unknown-linux-android/lib --ghc-option=-fPIC --gcc-option=-fPIC
+```
+in our `mobile-core` shell. 
+
+12:09 If needed we can add the `-g 1234` flags to and use `gdb` to debug, as we’ve seen the other day.
+
+12:10 This setup will make sure we see exactly the same view as CI would see.  If we can construct simpler test harness it might be easier to just work directly off of the GHC sources, and run the test in there. E.g. if you can make something fail by compiling a haskell or c program there and run it. For us the whole integration with the `network` library (for `iserv-remote`), and the `qemu` setup (or `wine`, ...) this is likely the more straight forward setup.
